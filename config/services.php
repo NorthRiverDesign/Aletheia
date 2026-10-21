@@ -28,6 +28,16 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'anthropic' => [
+        'key' => env('ANTHROPIC_API_KEY'),
+        'model' => env('ANTHROPIC_MODEL', 'claude-opus-5-5'),
+        'effort' => env('ANTHROPIC_EFFORT', 'high'),
+        'max_tokens' => (int) env('ANTHROPIC_MAX_TOKENS', 16000),
+        'web_search_max_uses' => (int) env('ANTHROPIC_WEB_SEARCH_MAX_USES', 5),
+        // Retry on a fallback model if the primary model declines a request.
+        'fallbacks' => (bool) env('ANTHROPIC_FALLBACKS', true),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

@@ -1,6 +1,15 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
-import { BookOpen, FolderGit2, LayoutGrid } from '@lucide/vue';
+import { Link, usePage } from '@inertiajs/vue3';
+import {
+    BookOpen,
+    ClipboardCheck,
+    Crosshair,
+    FolderGit2,
+    LayoutGrid,
+    MapPin,
+    ScanSearch,
+} from '@lucide/vue';
+import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -15,15 +24,45 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as analysesIndex } from '@/routes/analyses';
+import { index as findingsIndex } from '@/routes/findings';
+import { index as targetsIndex } from '@/routes/targets';
+import { index as vectorsIndex } from '@/routes/vectors';
 import type { NavItem } from '@/types';
 
-const mainNavItems: NavItem[] = [
+const page = usePage();
+
+const mainNavItems = computed<NavItem[]>(() => [
     {
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
     },
-];
+    {
+        title: 'Vectors',
+        href: vectorsIndex(),
+        icon: Crosshair,
+    },
+    {
+        title: 'Targets',
+        href: targetsIndex(),
+        icon: MapPin,
+    },
+    ...(page.props.auth.user.is_admin
+        ? [
+              {
+                  title: 'Analyses',
+                  href: analysesIndex(),
+                  icon: ScanSearch,
+              },
+              {
+                  title: 'Review queue',
+                  href: findingsIndex(),
+                  icon: ClipboardCheck,
+              },
+          ]
+        : []),
+]);
 
 const footerNavItems: NavItem[] = [
     {
