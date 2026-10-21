@@ -2,8 +2,11 @@
 
 use App\Enums\ProposalStatus;
 use App\Enums\VectorCategory;
+use App\Http\Requests\VectorRequest;
 use App\Models\User;
 use App\Models\Vector;
+use Database\Seeders\VectorCatalogSeeder;
+use Illuminate\Support\Facades\Validator;
 use Inertia\Testing\AssertableInertia as Assert;
 
 function vectorPayload(array $overrides = []): array
@@ -147,3 +150,52 @@ test('members do not receive findings on the vector page', function () {
             ->where('can.analyze', false),
         );
 });
+
+test('the catalog seeder is idempotent and publishes active vectors', function () {
+    $this->seed(VectorCatalogSeeder::class);
+    $this->seed(VectorCatalogSeeder::class);
+
+    expect(Vector::count())->toBe(count(VectorCatalogSeeder::vectors()))
+        ->and(Vector::where('status', '!=', ProposalStatus::Active)->count())->toBe(0);
+});
+
+test('catalog vectors pass the vector form validation', function (array $vector) {
+    $validator = Validator::make(
+        [...$vector, 'category' => $vector['category']->value],
+        (new VectorRequest)->rules(),
+    );
+
+    expect($validator->errors()->all())->toBe([]);
+})->with(fn () => array_combine(
+    array_column(VectorCatalogSeeder::vectors(), 'title'),
+    array_map(fn (array $vector) => [$vector], VectorCatalogSeeder::vectors()),
+));
+
+test('every category except other has a catalog vector', function () {
+    $used = array_map(fn (array $vector) => $vector['category'], VectorCatalogSeeder::vectors());
+
+    foreach (VectorCategory::cases() as $category) {
+        expect($category === VectorCategory::Other || in_array($category, $used, true))
+            ->toBeTrue("No catalog vector for {$category->value}");
+    }
+});
+
+test('the catalog covers fraud that federal whistleblower programs reward', function (string $title) {
+    expect(array_column(VectorCatalogSeeder::vectors(), 'title'))->toContain($title);
+})->with([
+    'False Claims Act: health care' => 'Medicaid billing for services not rendered',
+    'False Claims Act: Medicare Advantage' => 'Upcoded diagnoses in Medicare Advantage risk adjustment',
+    'False Claims Act: kickbacks' => 'Kickbacks for patient referrals and prescriptions',
+    'False Claims Act: set-asides' => 'Front companies winning small-business and DBE set-asides',
+    'False Claims Act: cybersecurity' => 'False cybersecurity compliance claims by contractors',
+    'False Claims Act: product substitution' => 'Substituted products and falsified test or origin certifications',
+    'False Claims Act: grants' => 'Misrepresented costs and results on government grants',
+    'False Claims Act: pandemic relief' => 'Pandemic relief loans to ineligible or fabricated businesses',
+    'False Claims Act and DOJ pilot: customs' => 'Customs duty and tariff evasion',
+    'DOJ pilot: domestic corruption' => 'Bribes and kickbacks to officials for contracts and approvals',
+    'Antitrust Division: bid rigging' => 'Bid rigging and rotation among contractors',
+    'Antitrust Division: price fixing' => 'Price fixing and market allocation among suppliers',
+    'IRS Whistleblower Office' => 'Unpaid payroll taxes and misclassified workers',
+    'SEC: municipal securities' => 'Misleading disclosures to municipal bond investors',
+    'SEC and CFTC: public investments' => 'Pay-to-play and hidden fees in public pension investing',
+]);

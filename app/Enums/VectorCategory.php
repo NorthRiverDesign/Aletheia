@@ -14,6 +14,7 @@ enum VectorCategory: string
     case EmergencyRelief = 'emergency_relief';
     case PayrollAndBenefits = 'payroll_benefits';
     case FinancialReporting = 'financial_reporting';
+    case TaxAndCustoms = 'tax_customs';
     case Other = 'other';
 
     public function label(): string
@@ -27,6 +28,7 @@ enum VectorCategory: string
             self::EmergencyRelief => 'Emergency relief programs',
             self::PayrollAndBenefits => 'Payroll & benefits',
             self::FinancialReporting => 'Financial reporting',
+            self::TaxAndCustoms => 'Taxes, tariffs & customs',
             self::Other => 'Other',
         };
     }
