@@ -5,6 +5,8 @@ use App\Models\Target;
 use App\Models\Vector;
 use App\Services\Analysis\AnalysisFailed;
 use App\Services\Analysis\ClaudeFraudAnalyzer;
+use App\Services\Analysis\ReferenceLink;
+use App\Services\Analysis\References;
 use GuzzleHttp\Client as Guzzle;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
@@ -73,11 +75,14 @@ test('it sends the vector and target to Claude and parses the recorded findings'
     $vector = Vector::factory()->create(['title' => 'Relatives owning awarded vendors', 'indicators' => ['Shared surnames']]);
     $target = Target::factory()->create(['name' => 'City of Springfield']);
 
-    $result = $analyzer->analyze($vector, $target);
+    $result = $analyzer->analyze($vector, $target, new References(
+        global: [new ReferenceLink('USAspending.gov', 'https://www.usaspending.gov/search')],
+        target: [new ReferenceLink('Springfield checkbook', 'https://checkbook.springfield.example.gov', 'Vendor payments')],
+    ));
 
     expect($result->summary)->toBe('One lead worth checking.')
         ->and($result->model)->toBe('claude-opus-5-5')
-        ->and($result->usage)->toBe(['input_tokens' => 100, 'output_tokens' => 50, 'web_searches' => 3])
+        ->and($result->usage)->toBe(['input_tokens' => 100, 'cached_input_tokens' => 0, 'output_tokens' => 50, 'web_searches' => 3])
         ->and($result->findings)->toHaveCount(2);
 
     $top = $result->findings[0];
@@ -104,7 +109,10 @@ test('it sends the vector and target to Claude and parses the recorded findings'
         ->and($body['tools'][0]['input_schema']['additionalProperties'])->toBeFalse()
         ->and($body['tools'][1])->toMatchArray(['type' => 'web_search_20260209', 'name' => 'web_search', 'max_uses' => 5])
         ->and($body['messages'][0]['role'])->toBe('user')
-        ->and($body['messages'][0]['content'])->toContain('Relatives owning awarded vendors', 'City of Springfield', 'Shared surnames');
+        ->and($body['system'][0]['text'])->toContain('USAspending.gov: https://www.usaspending.gov/search')
+        ->and($body['system'][0]['cache_control'])->toBe(['type' => 'ephemeral'])
+        ->and($body['messages'][0]['content'])->toContain('Relatives owning awarded vendors', 'City of Springfield', 'Shared surnames')
+        ->and($body['messages'][0]['content'])->toContain('Springfield checkbook: https://checkbook.springfield.example.gov (Vendor payments)');
 });
 
 test('it resumes a paused turn by sending the assistant content back', function () {
@@ -118,7 +126,7 @@ test('it resumes a paused turn by sending the assistant content back', function 
         claudeMessage([recordFindings(['assessment' => 'Nothing checks out.', 'findings' => []])], 'tool_use'),
     ], $history);
 
-    $result = $analyzer->analyze(Vector::factory()->create(), Target::factory()->create());
+    $result = $analyzer->analyze(Vector::factory()->create(), Target::factory()->create(), References::none());
 
     expect($result->findings)->toBe([])
         ->and($result->usage['input_tokens'])->toBe(200)
@@ -139,7 +147,7 @@ test('it asks again when the model answers without calling the tool', function (
         claudeMessage([recordFindings(['assessment' => 'Done.', 'findings' => []])], 'tool_use'),
     ], $history, webSearchMaxUses: 0);
 
-    $result = $analyzer->analyze(Vector::factory()->create(), Target::factory()->create());
+    $result = $analyzer->analyze(Vector::factory()->create(), Target::factory()->create(), References::none());
 
     $first = json_decode((string) $history[0]['request']->getBody(), true);
     $second = json_decode((string) $history[1]['request']->getBody(), true);
@@ -155,7 +163,7 @@ test('refusals fail the analysis', function () {
     $history = [];
     $analyzer = claudeAnalyzer([claudeMessage([], 'refusal')], $history);
 
-    $analyzer->analyze(Vector::factory()->create(), Target::factory()->create());
+    $analyzer->analyze(Vector::factory()->create(), Target::factory()->create(), References::none());
 })->throws(AnalysisFailed::class, 'declined');
 
 test('bad credentials fail the analysis with a hint', function () {
@@ -167,5 +175,5 @@ test('bad credentials fail the analysis with a hint', function () {
         ])),
     ], $history);
 
-    $analyzer->analyze(Vector::factory()->create(), Target::factory()->create());
+    $analyzer->analyze(Vector::factory()->create(), Target::factory()->create(), References::none());
 })->throws(AnalysisFailed::class, 'ANTHROPIC_API_KEY');

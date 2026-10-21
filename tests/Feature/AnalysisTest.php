@@ -12,6 +12,7 @@ use App\Services\Analysis\AnalysisFailed;
 use App\Services\Analysis\AnalysisResult;
 use App\Services\Analysis\FindingData;
 use App\Services\Analysis\FraudAnalyzer;
+use App\Services\Analysis\References;
 use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -21,7 +22,7 @@ function fakeAnalyzer(AnalysisResult|AnalysisFailed $outcome): void
     {
         public function __construct(private AnalysisResult|AnalysisFailed $outcome) {}
 
-        public function analyze(Vector $vector, Target $target): AnalysisResult
+        public function analyze(Vector $vector, Target $target, References $references): AnalysisResult
         {
             if ($this->outcome instanceof AnalysisFailed) {
                 throw $this->outcome;

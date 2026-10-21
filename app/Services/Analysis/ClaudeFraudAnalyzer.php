@@ -33,18 +33,20 @@ class ClaudeFraudAnalyzer implements FraudAnalyzer
         private readonly bool $fallbacks = true,
     ) {}
 
-    public function analyze(Vector $vector, Target $target): AnalysisResult
+    public function analyze(Vector $vector, Target $target, References $references): AnalysisResult
     {
         $webSearch = $this->webSearchMaxUses > 0;
-        $messages = [BetaMessageParam::with(content: AnalysisPrompt::user($vector, $target, $webSearch), role: 'user')];
-        $usage = ['input_tokens' => 0, 'output_tokens' => 0, 'web_searches' => 0];
+        $system = AnalysisPrompt::system($references->global);
+        $messages = [BetaMessageParam::with(content: AnalysisPrompt::user($vector, $target, $references->target, $webSearch), role: 'user')];
+        $usage = ['input_tokens' => 0, 'cached_input_tokens' => 0, 'output_tokens' => 0, 'web_searches' => 0];
 
         for ($request = 1; $request <= self::MAX_REQUESTS; $request++) {
-            $response = $this->send($messages, $webSearch);
+            $response = $this->send($system, $messages, $webSearch);
 
             $usage['input_tokens'] += $response->usage->inputTokens
                 + ($response->usage->cacheReadInputTokens ?? 0)
                 + ($response->usage->cacheCreationInputTokens ?? 0);
+            $usage['cached_input_tokens'] += $response->usage->cacheReadInputTokens ?? 0;
             $usage['output_tokens'] += $response->usage->outputTokens;
             $usage['web_searches'] += $response->usage->serverToolUse->webSearchRequests ?? 0;
 
@@ -76,7 +78,7 @@ class ClaudeFraudAnalyzer implements FraudAnalyzer
     /**
      * @param  list<BetaMessageParam>  $messages
      */
-    private function send(array $messages, bool $webSearch): BetaMessage
+    private function send(string $system, array $messages, bool $webSearch): BetaMessage
     {
         $tools = [BetaTool::with(
             inputSchema: AnalysisPrompt::findingsSchema(),
@@ -96,7 +98,7 @@ class ClaudeFraudAnalyzer implements FraudAnalyzer
                 model: $this->model,
                 fallbacks: $this->fallbacks ? 'default' : null,
                 outputConfig: ['effort' => Effort::tryFrom($this->effort) ?? Effort::HIGH],
-                system: [['type' => 'text', 'text' => AnalysisPrompt::system(), 'cacheControl' => ['type' => 'ephemeral']]],
+                system: [['type' => 'text', 'text' => $system, 'cacheControl' => ['type' => 'ephemeral']]],
                 thinking: ['type' => 'adaptive'],
                 toolChoice: ['type' => 'auto'],
                 tools: $tools,

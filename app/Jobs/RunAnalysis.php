@@ -7,6 +7,7 @@ use App\Enums\FindingStatus;
 use App\Models\Analysis;
 use App\Services\Analysis\AnalysisFailed;
 use App\Services\Analysis\FraudAnalyzer;
+use App\Services\Analysis\ReferenceLibrary;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
@@ -28,7 +29,7 @@ class RunAnalysis implements ShouldQueue
 
     public function __construct(public Analysis $analysis) {}
 
-    public function handle(FraudAnalyzer $analyzer): void
+    public function handle(FraudAnalyzer $analyzer, ReferenceLibrary $references): void
     {
         $analysis = $this->analysis;
 
@@ -39,14 +40,14 @@ class RunAnalysis implements ShouldQueue
         $analysis->update(['status' => AnalysisStatus::Running, 'started_at' => now(), 'error' => null]);
 
         try {
-            $result = $analyzer->analyze($analysis->vector, $analysis->target);
+            $result = $analyzer->analyze($analysis->vector, $analysis->target, $references->for($analysis->target));
         } catch (AnalysisFailed $e) {
             $this->markFailed($e->getMessage());
 
             return;
         }
 
-        DB::transaction(function () use ($analysis, $result) {
+        DB::transaction(function () use ($analysis, $result, $references) {
             foreach ($result->findings as $finding) {
                 $analysis->findings()->create([
                     'vector_id' => $analysis->vector_id,
@@ -62,6 +63,8 @@ class RunAnalysis implements ShouldQueue
                     'status' => FindingStatus::Pending,
                 ]);
             }
+
+            $references->rememberFromAnalysis($analysis, $result->referenceSources);
 
             $analysis->update([
                 'status' => AnalysisStatus::Completed,

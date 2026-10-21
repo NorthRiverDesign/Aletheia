@@ -46,7 +46,7 @@ final readonly class FindingData
 
             $evidence[] = [
                 'description' => self::text($item['description']),
-                'url' => self::url($item['url'] ?? null),
+                'url' => ReferenceLink::webUrl($item['url'] ?? null),
             ];
         }
 
@@ -86,21 +86,5 @@ final readonly class FindingData
             array_map(fn (mixed $item): string => self::text($item), self::list($value)),
             fn (string $item): bool => $item !== '',
         ));
-    }
-
-    /**
-     * Only keep web links, so model output can never smuggle in other schemes.
-     */
-    private static function url(mixed $value): ?string
-    {
-        $url = self::text($value);
-
-        if (filter_var($url, FILTER_VALIDATE_URL) === false) {
-            return null;
-        }
-
-        $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
-
-        return in_array($scheme, ['http', 'https'], true) ? $url : null;
     }
 }

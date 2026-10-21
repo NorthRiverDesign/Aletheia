@@ -51,6 +51,7 @@ export type Analysis = {
     created_at: string | null;
     started_at: string | null;
     completed_at: string | null;
+    cooldown_until: string | null;
 };
 
 export type Evidence = {
@@ -78,6 +79,17 @@ export type Finding = {
     created_at: string | null;
 };
 
+export type ReferenceSource = {
+    id: number;
+    title: string;
+    url: string;
+    description: string | null;
+    origin: Option<'catalog' | 'member' | 'analysis'>;
+    verified: boolean;
+    analysis_id: number | null;
+    last_seen_at: string | null;
+};
+
 export type PickerOption = {
     id: number;
     label: string;
@@ -90,6 +102,7 @@ export type ProposalAbilities = {
     moderate: boolean;
     vote: boolean;
     analyze: boolean;
+    manageReferences?: boolean;
 };
 
 export type Paginated<T> = {

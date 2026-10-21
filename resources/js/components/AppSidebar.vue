@@ -6,6 +6,7 @@ import {
     Crosshair,
     FolderGit2,
     LayoutGrid,
+    Library,
     MapPin,
     ScanSearch,
 } from '@lucide/vue';
@@ -26,6 +27,7 @@ import {
 import { dashboard } from '@/routes';
 import { index as analysesIndex } from '@/routes/analyses';
 import { index as findingsIndex } from '@/routes/findings';
+import { index as referencesIndex } from '@/routes/reference-sources';
 import { index as targetsIndex } from '@/routes/targets';
 import { index as vectorsIndex } from '@/routes/vectors';
 import type { NavItem } from '@/types';
@@ -47,6 +49,11 @@ const mainNavItems = computed<NavItem[]>(() => [
         title: 'Targets',
         href: targetsIndex(),
         icon: MapPin,
+    },
+    {
+        title: 'Reference data',
+        href: referencesIndex(),
+        icon: Library,
     },
     ...(page.props.auth.user.is_admin
         ? [

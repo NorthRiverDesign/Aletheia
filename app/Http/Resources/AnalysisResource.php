@@ -35,6 +35,7 @@ class AnalysisResource extends JsonResource
             'created_at' => $this->created_at?->toIso8601String(),
             'started_at' => $this->started_at?->toIso8601String(),
             'completed_at' => $this->completed_at?->toIso8601String(),
+            'cooldown_until' => $this->resource->cooldownUntil()?->toIso8601String(),
         ];
     }
 }

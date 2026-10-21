@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ExternalLink, Pencil, Trash2 } from '@lucide/vue';
+import AddReferenceSourceForm from '@/components/AddReferenceSourceForm.vue';
 import AnalysisList from '@/components/AnalysisList.vue';
 import FindingList from '@/components/FindingList.vue';
 import Heading from '@/components/Heading.vue';
+import ReferenceSourceList from '@/components/ReferenceSourceList.vue';
 import RunAnalysisForm from '@/components/RunAnalysisForm.vue';
 import StatusBadge from '@/components/StatusBadge.vue';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +19,7 @@ import type {
     PickerOption,
     ProposalAbilities,
     ProposalStatus,
+    ReferenceSource,
     Target,
 } from '@/types';
 
@@ -30,6 +33,7 @@ const props = defineProps<{
     target: Target;
     can: ProposalAbilities;
     statuses: Option<ProposalStatus>[];
+    references: ReferenceSource[];
     findings: Finding[];
     analyses: Analysis[];
     vectors: PickerOption[];
@@ -124,6 +128,23 @@ function remove(): void {
         <section v-if="target.description" class="space-y-2">
             <Heading variant="small" title="Why look here" />
             <p class="whitespace-pre-line">{{ target.description }}</p>
+        </section>
+
+        <section class="space-y-3">
+            <Heading
+                variant="small"
+                title="Reference data"
+                description="Public datasets for this place. Analyses start from these instead of searching for them again."
+            />
+            <ReferenceSourceList
+                :sources="references"
+                :can-manage="can.manageReferences ?? false"
+                empty="No datasets recorded for this target yet. Analyses add the ones they find."
+            />
+            <AddReferenceSourceForm
+                v-if="can.manageReferences"
+                :target-id="target.id"
+            />
         </section>
 
         <template v-if="can.analyze">

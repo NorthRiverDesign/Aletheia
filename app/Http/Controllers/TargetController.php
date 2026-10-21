@@ -8,9 +8,11 @@ use App\Http\Controllers\Concerns\ProvidesAnalysisOptions;
 use App\Http\Requests\TargetRequest;
 use App\Http\Resources\AnalysisResource;
 use App\Http\Resources\FindingResource;
+use App\Http\Resources\ReferenceSourceResource;
 use App\Http\Resources\TargetResource;
 use App\Models\Analysis;
 use App\Models\Finding;
+use App\Models\ReferenceSource;
 use App\Models\Target;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -114,8 +116,18 @@ class TargetController extends Controller
                 'moderate' => $user->can('moderate', Target::class),
                 'vote' => $user->can('vote', $target),
                 'analyze' => $user->can('create', Analysis::class),
+                'manageReferences' => $user->can('create', ReferenceSource::class),
             ],
             'statuses' => ProposalStatus::options(),
+            'references' => ReferenceSource::query()
+                ->where('target_id', $target->id)
+                ->visibleTo($user)
+                ->orderByRaw('verified_at is null')
+                ->orderByDesc('last_seen_at')
+                ->orderByDesc('id')
+                ->get()
+                ->map(fn (ReferenceSource $source) => ReferenceSourceResource::make($source)->resolve($request))
+                ->all(),
             'findings' => [],
             'analyses' => [],
             'vectors' => [],
@@ -124,7 +136,7 @@ class TargetController extends Controller
         if ($user->can('viewAny', Finding::class)) {
             $props['findings'] = $target->findings()->with('vector')->orderByDesc('risk_score')->limit(10)->get()
                 ->map(fn (Finding $finding) => FindingResource::make($finding)->resolve($request))->all();
-            $props['analyses'] = $target->analyses()->with('vector')->withCount('findings')->withMax('findings', 'risk_score')->latest('id')->limit(10)->get()
+            $props['analyses'] = $target->analyses()->with(['vector', 'target'])->withCount('findings')->withMax('findings', 'risk_score')->latest('id')->limit(10)->get()
                 ->map(fn (Analysis $analysis) => AnalysisResource::make($analysis)->resolve($request))->all();
             $props['vectors'] = $this->vectorOptions();
         }

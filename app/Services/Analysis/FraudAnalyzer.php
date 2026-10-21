@@ -13,5 +13,5 @@ interface FraudAnalyzer
     /**
      * @throws AnalysisFailed
      */
-    public function analyze(Vector $vector, Target $target): AnalysisResult;
+    public function analyze(Vector $vector, Target $target, References $references): AnalysisResult;
 }

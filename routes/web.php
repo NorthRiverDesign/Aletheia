@@ -3,6 +3,7 @@
 use App\Http\Controllers\AnalysisController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FindingController;
+use App\Http\Controllers\ReferenceSourceController;
 use App\Http\Controllers\TargetController;
 use App\Http\Controllers\VectorController;
 use App\Http\Controllers\VoteController;
@@ -27,6 +28,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::resource('analyses', AnalysisController::class)->only(['index', 'store', 'show']);
     Route::resource('findings', FindingController::class)->only(['index', 'show', 'update']);
+
+    Route::resource('reference-sources', ReferenceSourceController::class)->only(['index', 'store', 'destroy']);
+    Route::patch('reference-sources/{reference_source}/verify', [ReferenceSourceController::class, 'verify'])->name('reference-sources.verify');
 });
 
 require __DIR__.'/settings.php';

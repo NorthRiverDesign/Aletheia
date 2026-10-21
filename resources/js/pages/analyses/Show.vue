@@ -84,11 +84,25 @@ const usage = computed(() => props.analysis.usage ?? {});
                     <dt class="text-xs">Tokens / searches</dt>
                     <dd>
                         {{
-                            (usage.input_tokens ?? 0) +
-                            (usage.output_tokens ?? 0)
+                            (
+                                (usage.input_tokens ?? 0) +
+                                (usage.output_tokens ?? 0)
+                            ).toLocaleString()
                         }}
                         / {{ usage.web_searches ?? 0 }}
                     </dd>
+                </div>
+                <div v-if="usage.cached_input_tokens">
+                    <dt class="text-xs">Cached input</dt>
+                    <dd>{{ usage.cached_input_tokens.toLocaleString() }}</dd>
+                </div>
+                <div v-if="usage.cost_usd">
+                    <dt class="text-xs">Cost</dt>
+                    <dd>${{ usage.cost_usd.toFixed(4) }}</dd>
+                </div>
+                <div v-if="analysis.cooldown_until">
+                    <dt class="text-xs">Can re-run</dt>
+                    <dd>{{ formatDate(analysis.cooldown_until) }}</dd>
                 </div>
             </dl>
         </div>

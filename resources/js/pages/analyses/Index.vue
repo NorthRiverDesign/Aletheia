@@ -18,6 +18,7 @@ const props = defineProps<{
     analyses: Paginated<Analysis>;
     vectors: PickerOption[];
     targets: PickerOption[];
+    cooldown: string | null;
 }>();
 
 const inProgress = computed(() =>
@@ -54,6 +55,10 @@ watch(inProgress, (running) => (running ? start() : stop()), {
                 description="Vectors and targets are listed by community votes. Leave the vector empty to check every active vector."
             />
             <RunAnalysisForm :vectors="vectors" :targets="targets" />
+            <p v-if="cooldown" class="text-sm text-muted-foreground">
+                To save tokens, pairings analyzed in the last {{ cooldown }}
+                are skipped.
+            </p>
             <p
                 v-if="!vectors.length || !targets.length"
                 class="text-sm text-muted-foreground"

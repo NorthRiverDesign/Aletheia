@@ -13,6 +13,7 @@ use App\Models\Analysis;
 use App\Models\Finding;
 use App\Models\Target;
 use App\Models\Vector;
+use Carbon\CarbonInterval;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -42,6 +43,7 @@ class AnalysisController extends Controller
             'analyses' => $analyses,
             'vectors' => $this->vectorOptions(),
             'targets' => $this->targetOptions(),
+            'cooldown' => Analysis::cooldownHours() > 0 ? $this->cooldownPeriod() : null,
         ]);
     }
 
@@ -58,16 +60,19 @@ class AnalysisController extends Controller
             ? Vector::whereKey($request->integer('vector_id'))->get()
             : Vector::where('status', ProposalStatus::Active)->orderByDesc('votes_count')->get();
 
-        $inProgress = Analysis::query()
+        // Skip pairings already running or analyzed within the cooldown, so the same lookups aren't paid for twice.
+        $blocking = Analysis::query()
             ->where('target_id', $target->id)
-            ->whereIn('status', [AnalysisStatus::Queued, AnalysisStatus::Running])
-            ->pluck('vector_id')
-            ->all();
+            ->blockingRerun()
+            ->latest('id')
+            ->get()
+            ->unique('vector_id')
+            ->keyBy('vector_id');
 
         $queued = [];
 
         foreach ($vectors as $vector) {
-            if (in_array($vector->id, $inProgress, true)) {
+            if ($blocking->has($vector->id)) {
                 continue;
             }
 
@@ -83,16 +88,37 @@ class AnalysisController extends Controller
             $queued[] = $analysis;
         }
 
+        if ($queued === [] && $request->filled('vector_id') && ($existing = $blocking->first()) !== null) {
+            $until = $existing->cooldownUntil();
+
+            Inertia::flash('toast', ['type' => 'info', 'message' => $until === null
+                ? __('This pairing is already being analyzed.')
+                : __('This pairing was analyzed recently. To save tokens it can run again :when.', ['when' => $until->diffForHumans()])]);
+
+            return to_route('analyses.show', $existing);
+        }
+
         $skipped = $vectors->count() - count($queued);
+        $skippedMessage = Analysis::cooldownHours() > 0
+            ? trans_choice('{1} Skipped 1 in progress or analyzed in the last :period.|[2,*] Skipped :count in progress or analyzed in the last :period.', $skipped, ['period' => $this->cooldownPeriod()])
+            : trans_choice('{1} Skipped 1 already in progress.|[2,*] Skipped :count already in progress.', $skipped);
 
         Inertia::flash('toast', count($queued) === 0
-            ? ['type' => 'info', 'message' => __('Nothing new to queue: those analyses are already in progress.')]
+            ? ['type' => 'info', 'message' => __('Nothing new to queue.').' '.$skippedMessage]
             : ['type' => 'success', 'message' => trans_choice('{1} Queued 1 analysis.|[2,*] Queued :count analyses.', count($queued))
-                .($skipped > 0 ? ' '.trans_choice('{1} Skipped 1 already in progress.|[2,*] Skipped :count already in progress.', $skipped) : '')]);
+                .($skipped > 0 ? ' '.$skippedMessage : '')]);
 
         return count($queued) === 1
             ? to_route('analyses.show', $queued[0])
             : to_route('analyses.index');
+    }
+
+    /**
+     * The cooldown as words, e.g. "1 week".
+     */
+    private function cooldownPeriod(): string
+    {
+        return CarbonInterval::hours(Analysis::cooldownHours())->cascade()->forHumans();
     }
 
     /**

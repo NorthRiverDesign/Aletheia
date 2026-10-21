@@ -25,7 +25,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'test@example.com',
         ]);
 
-        $this->call(VectorCatalogSeeder::class);
+        $this->call([VectorCatalogSeeder::class, ReferenceCatalogSeeder::class]);
 
         $targets = [
             ['name' => 'Minnesota Child Care Assistance Program', 'type' => TargetType::Program, 'region' => 'Minnesota', 'website' => 'https://mn.gov/dcyf/'],

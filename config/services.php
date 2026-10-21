@@ -38,6 +38,18 @@ return [
         'fallbacks' => (bool) env('ANTHROPIC_FALLBACKS', true),
     ],
 
+    'xai' => [
+        'key' => env('XAI_API_KEY'),
+        'base_url' => env('XAI_BASE_URL', 'https://api.x.ai/v1'),
+        'model' => env('XAI_MODEL', 'grok-4.3'),
+        // none, low, medium, high or xhigh; empty uses the model's default.
+        'reasoning_effort' => env('XAI_REASONING_EFFORT'),
+        'max_output_tokens' => (int) env('XAI_MAX_OUTPUT_TOKENS', 16000),
+        // Caps agentic turns (web searches) per request; 0 leaves it to xAI.
+        'max_turns' => (int) env('XAI_MAX_TURNS', 8),
+        'web_search' => (bool) env('XAI_WEB_SEARCH', true),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

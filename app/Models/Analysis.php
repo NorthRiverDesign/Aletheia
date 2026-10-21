@@ -6,6 +6,7 @@ use App\Enums\AnalysisStatus;
 use Carbon\CarbonImmutable;
 use Database\Factories\AnalysisFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -22,7 +23,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $model
  * @property string|null $summary
  * @property string|null $error
- * @property array<string, int>|null $usage
+ * @property array<string, int|float>|null $usage
  * @property CarbonImmutable|null $started_at
  * @property CarbonImmutable|null $completed_at
  * @property CarbonImmutable|null $created_at
@@ -47,6 +48,46 @@ class Analysis extends Model
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Hours a completed pairing stays on cooldown before it can be analyzed again.
+     */
+    public static function cooldownHours(): int
+    {
+        return max(0, config()->integer('analysis.cooldown_hours'));
+    }
+
+    /**
+     * Analyses that block a new run of the same pairing: still in progress, or completed within the cooldown.
+     *
+     * @param  Builder<static>  $query
+     */
+    public function scopeBlockingRerun(Builder $query): void
+    {
+        $hours = self::cooldownHours();
+
+        $query->where(fn (Builder $query) => $query
+            ->whereIn('status', [AnalysisStatus::Queued, AnalysisStatus::Running])
+            ->when($hours > 0, fn (Builder $query) => $query->orWhere(fn (Builder $query) => $query
+                ->where('status', AnalysisStatus::Completed)
+                ->where('completed_at', '>=', now()->subHours($hours)))));
+    }
+
+    /**
+     * When this pairing may be analyzed again, if a completed run is still cooling down.
+     */
+    public function cooldownUntil(): ?CarbonImmutable
+    {
+        $hours = self::cooldownHours();
+
+        if ($this->status !== AnalysisStatus::Completed || $this->completed_at === null || $hours === 0) {
+            return null;
+        }
+
+        $until = $this->completed_at->addHours($hours);
+
+        return $until->isFuture() ? $until : null;
     }
 
     /**
