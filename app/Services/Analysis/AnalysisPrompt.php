@@ -180,7 +180,7 @@ final class AnalysisPrompt
      * @param  list<ReferenceLink>  $links
      * @return list<string>
      */
-    private static function links(array $links): array
+    public static function links(array $links): array
     {
         return array_map(
             fn (ReferenceLink $link): string => '- '.$link->title.': '.$link->url.($link->description ? ' ('.$link->description.')' : ''),
@@ -192,7 +192,7 @@ final class AnalysisPrompt
      * @param  list<string>  $items
      * @return list<string>
      */
-    private static function bullets(array $items): array
+    public static function bullets(array $items): array
     {
         return $items === [] ? ['- (none listed)'] : array_map(fn (string $item): string => '- '.$item, $items);
     }

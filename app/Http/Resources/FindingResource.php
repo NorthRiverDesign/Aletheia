@@ -35,6 +35,9 @@ class FindingResource extends JsonResource
             'reviewed_at' => $this->reviewed_at?->toIso8601String(),
             'vector' => $this->relationLoaded('vector') ? ['id' => $this->vector->id, 'title' => $this->vector->title] : null,
             'target' => $this->relationLoaded('target') ? ['id' => $this->target->id, 'name' => $this->target->name] : null,
+            'verification' => $this->relationLoaded('latestVerification') && $this->latestVerification !== null
+                ? VerificationResource::make($this->latestVerification)->resolve($request)
+                : null,
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }

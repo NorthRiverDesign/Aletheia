@@ -55,7 +55,7 @@ class DashboardController extends Controller
                 ->all(),
             'topFindings' => $isReviewer
                 ? Finding::query()
-                    ->with(['vector', 'target'])
+                    ->with(['vector', 'target', 'latestVerification'])
                     ->where('status', FindingStatus::Pending)
                     ->orderByDesc('risk_score')
                     ->latest('id')

@@ -47,9 +47,11 @@ class RunAnalysis implements ShouldQueue
             return;
         }
 
-        DB::transaction(function () use ($analysis, $result, $references) {
+        $findings = DB::transaction(function () use ($analysis, $result, $references): array {
+            $findings = [];
+
             foreach ($result->findings as $finding) {
-                $analysis->findings()->create([
+                $findings[] = $analysis->findings()->create([
                     'vector_id' => $analysis->vector_id,
                     'target_id' => $analysis->target_id,
                     'title' => $finding->title,
@@ -73,7 +75,15 @@ class RunAnalysis implements ShouldQueue
                 'usage' => $result->usage,
                 'completed_at' => now(),
             ]);
+
+            return $findings;
         });
+
+        if (config()->boolean('analysis.verification.auto')) {
+            foreach ($findings as $finding) {
+                VerifyFinding::start($finding, $analysis->requested_by);
+            }
+        }
     }
 
     /**

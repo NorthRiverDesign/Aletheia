@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AnalysisStatus;
 use App\Enums\FindingStatus;
+use App\Enums\Verdict;
 use App\Http\Requests\ReviewFindingRequest;
 use App\Http\Resources\FindingResource;
 use App\Models\Finding;
@@ -16,6 +18,11 @@ use Inertia\Response;
 class FindingController extends Controller
 {
     /**
+     * Review-queue filter for leads without a completed fact check.
+     */
+    private const UNCHECKED = 'unchecked';
+
+    /**
      * The review queue: leads ordered by risk score.
      */
     public function index(Request $request): Response
@@ -24,11 +31,16 @@ class FindingController extends Controller
 
         $status = FindingStatus::tryFrom($request->string('status')->toString()) ?? FindingStatus::Pending;
         $minScore = max(0, min(100, $request->integer('min_score')));
+        $checked = $request->string('checked')->toString();
+        $verdict = Verdict::tryFrom($checked);
+        $checked = $verdict !== null || $checked === self::UNCHECKED ? $checked : '';
 
         $findings = Finding::query()
-            ->with(['vector', 'target'])
+            ->with(['vector', 'target', 'latestVerification'])
             ->where('status', $status)
             ->when($minScore > 0, fn (Builder $query) => $query->where('risk_score', '>=', $minScore))
+            ->when($verdict !== null, fn (Builder $query) => $query->whereHas('latestVerification', fn (Builder $query) => $query->where('verdict', $verdict)))
+            ->when($checked === self::UNCHECKED, fn (Builder $query) => $query->whereDoesntHave('verifications', fn (Builder $query) => $query->where('status', AnalysisStatus::Completed)))
             ->orderByDesc('risk_score')
             ->latest('id')
             ->paginate(25)
@@ -37,9 +49,10 @@ class FindingController extends Controller
 
         return Inertia::render('findings/Index', [
             'findings' => $findings,
-            'filters' => ['status' => $status->value, 'min_score' => $minScore],
+            'filters' => ['status' => $status->value, 'min_score' => $minScore, 'checked' => $checked],
             'statusCounts' => Finding::query()->toBase()->selectRaw('status, count(*) as aggregate')->groupBy('status')->pluck('aggregate', 'status'),
             'statuses' => FindingStatus::options(),
+            'verdicts' => Verdict::options(),
         ]);
     }
 
@@ -50,7 +63,7 @@ class FindingController extends Controller
     {
         Gate::authorize('view', $finding);
 
-        $finding->load(['vector', 'target', 'reviewer']);
+        $finding->load(['vector', 'target', 'reviewer', 'latestVerification']);
 
         return Inertia::render('findings/Show', [
             'finding' => FindingResource::make($finding)->resolve($request),

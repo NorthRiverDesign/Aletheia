@@ -132,7 +132,7 @@ class AnalysisController extends Controller
 
         return Inertia::render('analyses/Show', [
             'analysis' => AnalysisResource::make($analysis)->resolve($request),
-            'findings' => $analysis->findings()->orderByDesc('risk_score')->get()
+            'findings' => $analysis->findings()->with('latestVerification')->orderByDesc('risk_score')->get()
                 ->map(fn (Finding $finding) => FindingResource::make($finding)->resolve($request))->all(),
         ]);
     }

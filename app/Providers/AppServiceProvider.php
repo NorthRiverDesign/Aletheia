@@ -6,6 +6,7 @@ use Anthropic\Client;
 use App\Models\Target;
 use App\Models\Vector;
 use App\Services\Analysis\ClaudeFraudAnalyzer;
+use App\Services\Analysis\FindingVerifier;
 use App\Services\Analysis\FraudAnalyzer;
 use App\Services\Analysis\GrokFraudAnalyzer;
 use App\Services\Analysis\ReferenceLibrary;
@@ -28,7 +29,23 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->bind(FraudAnalyzer::class, fn (): FraudAnalyzer => match (config('analysis.provider')) {
+        $this->app->bind(FraudAnalyzer::class, fn (): FraudAnalyzer => $this->analyzer());
+        $this->app->bind(FindingVerifier::class, fn (): FindingVerifier => $this->analyzer());
+
+        $this->app->singleton(ReferenceLibrary::class, fn (): ReferenceLibrary => new ReferenceLibrary(
+            cache: $this->app->make(Cache::class),
+            promptLimit: config()->integer('analysis.references.prompt_limit'),
+            storeLimit: config()->integer('analysis.references.store_limit'),
+            ttl: config()->integer('analysis.references.cache_ttl'),
+        ));
+    }
+
+    /**
+     * The configured provider's client, which both analyzes pairings and fact-checks findings.
+     */
+    private function analyzer(): ClaudeFraudAnalyzer|GrokFraudAnalyzer
+    {
+        return match (config('analysis.provider')) {
             'xai', 'grok' => new GrokFraudAnalyzer(
                 http: $this->app->make(HttpFactory::class),
                 apiKey: $this->optionalConfig('services.xai.key'),
@@ -45,16 +62,10 @@ class AppServiceProvider extends ServiceProvider
                 effort: config()->string('services.anthropic.effort'),
                 maxTokens: config()->integer('services.anthropic.max_tokens'),
                 webSearchMaxUses: config()->integer('services.anthropic.web_search_max_uses'),
+                webFetchMaxUses: config()->integer('services.anthropic.web_fetch_max_uses'),
                 fallbacks: config()->boolean('services.anthropic.fallbacks'),
             ),
-        });
-
-        $this->app->singleton(ReferenceLibrary::class, fn (): ReferenceLibrary => new ReferenceLibrary(
-            cache: $this->app->make(Cache::class),
-            promptLimit: config()->integer('analysis.references.prompt_limit'),
-            storeLimit: config()->integer('analysis.references.store_limit'),
-            ttl: config()->integer('analysis.references.cache_ttl'),
-        ));
+        };
     }
 
     /**

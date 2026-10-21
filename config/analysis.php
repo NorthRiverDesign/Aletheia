@@ -30,6 +30,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Fact Checks
+    |--------------------------------------------------------------------------
+    |
+    | A second AI pass can re-check a finding's claims and sources and look
+    | for errors. Reviewers start one from a finding or an analysis; turn on
+    | "auto" to fact-check every new finding as soon as its analysis
+    | completes, which roughly doubles the inference spent per analysis.
+    |
+    */
+
+    'verification' => [
+        'auto' => (bool) env('VERIFY_FINDINGS_AUTOMATICALLY', false),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Reference Data
     |--------------------------------------------------------------------------
     |

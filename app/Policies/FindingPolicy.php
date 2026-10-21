@@ -23,4 +23,12 @@ class FindingPolicy
     {
         return $user->is_admin;
     }
+
+    /**
+     * Fact checks spend inference budget.
+     */
+    public function verify(User $user): bool
+    {
+        return $user->is_admin;
+    }
 }

@@ -122,7 +122,7 @@ class VectorController extends Controller
         ];
 
         if ($user->can('viewAny', Finding::class)) {
-            $props['findings'] = $vector->findings()->with('target')->orderByDesc('risk_score')->limit(10)->get()
+            $props['findings'] = $vector->findings()->with(['target', 'latestVerification'])->orderByDesc('risk_score')->limit(10)->get()
                 ->map(fn (Finding $finding) => FindingResource::make($finding)->resolve($request))->all();
             $props['analyses'] = $vector->analyses()->with(['vector', 'target'])->withCount('findings')->withMax('findings', 'risk_score')->latest('id')->limit(10)->get()
                 ->map(fn (Analysis $analysis) => AnalysisResource::make($analysis)->resolve($request))->all();

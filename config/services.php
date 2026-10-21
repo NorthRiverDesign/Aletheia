@@ -34,6 +34,8 @@ return [
         'effort' => env('ANTHROPIC_EFFORT', 'high'),
         'max_tokens' => (int) env('ANTHROPIC_MAX_TOKENS', 16000),
         'web_search_max_uses' => (int) env('ANTHROPIC_WEB_SEARCH_MAX_USES', 5),
+        // Pages a fact check may open to read the sources a finding cites; 0 disables.
+        'web_fetch_max_uses' => (int) env('ANTHROPIC_WEB_FETCH_MAX_USES', 10),
         // Retry on a fallback model if the primary model declines a request.
         'fallbacks' => (bool) env('ANTHROPIC_FALLBACKS', true),
     ],

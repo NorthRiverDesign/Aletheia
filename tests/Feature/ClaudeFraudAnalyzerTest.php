@@ -1,6 +1,9 @@
 <?php
 
 use Anthropic\Client;
+use App\Enums\Confidence;
+use App\Enums\Verdict;
+use App\Models\Finding;
 use App\Models\Target;
 use App\Models\Vector;
 use App\Services\Analysis\AnalysisFailed;
@@ -177,3 +180,52 @@ test('bad credentials fail the analysis with a hint', function () {
 
     $analyzer->analyze(Vector::factory()->create(), Target::factory()->create(), References::none());
 })->throws(AnalysisFailed::class, 'ANTHROPIC_API_KEY');
+
+test('it fact-checks a finding with web search and web fetch', function () {
+    $history = [];
+    $analyzer = claudeAnalyzer([
+        claudeMessage([[
+            'type' => 'tool_use', 'id' => 'toolu_2', 'name' => 'record_verification', 'input' => [
+                'verdict' => 'contradicted',
+                'summary' => 'The registry lists a different owner.',
+                'claims' => [[
+                    'claim' => 'Acme Paving is owned by the council aide', 'status' => 'incorrect',
+                    'note' => 'The registry lists an unrelated owner.', 'url' => 'https://sos.example.gov/acme',
+                ]],
+                'issues' => ['Owner misidentified'],
+                'risk_score' => 10,
+                'confidence' => 'high',
+            ],
+        ]], 'tool_use', ['server_tool_use' => ['web_search_requests' => 1, 'web_fetch_requests' => 2]]),
+    ], $history);
+
+    $finding = Finding::factory()->create([
+        'title' => 'Vendor shares owner with council aide',
+        'evidence' => [['description' => 'Business filing', 'url' => 'https://sos.example.gov/acme']],
+    ]);
+
+    $result = $analyzer->verify($finding, References::none());
+
+    expect($result->verdict)->toBe(Verdict::Contradicted)
+        ->and($result->summary)->toBe('The registry lists a different owner.')
+        ->and($result->riskScore)->toBe(10)
+        ->and($result->confidence)->toBe(Confidence::High)
+        ->and($result->claims[0]['status'])->toBe('incorrect')
+        ->and($result->issues)->toBe(['Owner misidentified'])
+        ->and($result->usage)->toBe(['input_tokens' => 100, 'cached_input_tokens' => 0, 'output_tokens' => 50, 'web_searches' => 1, 'web_fetches' => 2]);
+
+    $body = json_decode((string) $history[0]['request']->getBody(), true);
+
+    expect($body['tools'][0]['name'])->toBe('record_verification')
+        ->and($body['tools'][0]['strict'])->toBeTrue()
+        ->and($body['tools'][0]['input_schema']['required'])->toBe(['verdict', 'summary', 'claims', 'issues', 'risk_score', 'confidence'])
+        ->and($body['tools'][1])->toMatchArray(['type' => 'web_search_20260209', 'max_uses' => 5])
+        ->and($body['tools'][2])->toMatchArray(['type' => 'web_fetch_20260209', 'name' => 'web_fetch', 'max_uses' => 10])
+        ->and($body['system'][0]['text'])->toContain('independent fact-checker')
+        ->and($body['messages'][0]['content'])->toContain(
+            'Lead to fact-check: Vendor shares owner with council aide',
+            '1. Business filing — https://sos.example.gov/acme',
+            $finding->vector->title,
+            $finding->target->name,
+        );
+});

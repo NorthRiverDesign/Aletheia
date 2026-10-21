@@ -134,7 +134,7 @@ class TargetController extends Controller
         ];
 
         if ($user->can('viewAny', Finding::class)) {
-            $props['findings'] = $target->findings()->with('vector')->orderByDesc('risk_score')->limit(10)->get()
+            $props['findings'] = $target->findings()->with(['vector', 'latestVerification'])->orderByDesc('risk_score')->limit(10)->get()
                 ->map(fn (Finding $finding) => FindingResource::make($finding)->resolve($request))->all();
             $props['analyses'] = $target->analyses()->with(['vector', 'target'])->withCount('findings')->withMax('findings', 'risk_score')->latest('id')->limit(10)->get()
                 ->map(fn (Analysis $analysis) => AnalysisResource::make($analysis)->resolve($request))->all();

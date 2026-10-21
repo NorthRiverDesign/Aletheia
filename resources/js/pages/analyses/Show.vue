@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { Head, Link, usePoll } from '@inertiajs/vue3';
-import { CircleAlert, LoaderCircle } from '@lucide/vue';
+import { Form, Head, Link, usePoll } from '@inertiajs/vue3';
+import { CircleAlert, LoaderCircle, ShieldCheck } from '@lucide/vue';
 import { computed, watch } from 'vue';
+import VerificationController from '@/actions/App/Http/Controllers/VerificationController';
 import FindingList from '@/components/FindingList.vue';
 import Heading from '@/components/Heading.vue';
 import LeadDisclaimer from '@/components/LeadDisclaimer.vue';
 import StatusBadge from '@/components/StatusBadge.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { index } from '@/routes/analyses';
 import { show as showTarget } from '@/routes/targets';
 import { show as showVector } from '@/routes/vectors';
@@ -27,15 +29,35 @@ const inProgress = computed(() =>
     ['queued', 'running'].includes(props.analysis.status.value),
 );
 
+const checking = computed(() =>
+    props.findings.some((finding) =>
+        ['queued', 'running'].includes(
+            finding.verification?.status.value ?? '',
+        ),
+    ),
+);
+
+// Leads with no fact check yet, or whose last one failed.
+const unchecked = computed(
+    () =>
+        props.findings.filter(
+            (finding) =>
+                !finding.verification ||
+                finding.verification.status.value === 'failed',
+        ).length,
+);
+
 const { start, stop } = usePoll(
     4000,
     { only: ['analysis', 'findings'] },
     { autoStart: false },
 );
 
-watch(inProgress, (running) => (running ? start() : stop()), {
-    immediate: true,
-});
+watch(
+    () => inProgress.value || checking.value,
+    (running) => (running ? start() : stop()),
+    { immediate: true },
+);
 
 function formatDate(value: string | null): string {
     return value ? new Date(value).toLocaleString() : '—';
@@ -132,7 +154,23 @@ const usage = computed(() => props.analysis.usage ?? {});
         </section>
 
         <section v-if="analysis.status.value === 'completed'" class="space-y-3">
-            <Heading variant="small" title="Findings" />
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <Heading variant="small" title="Findings" />
+                <Form
+                    v-if="unchecked"
+                    v-bind="VerificationController.analysis.form(analysis.id)"
+                    v-slot="{ processing }"
+                >
+                    <Button variant="outline" size="sm" :disabled="processing">
+                        <ShieldCheck />
+                        {{
+                            unchecked === findings.length
+                                ? 'Fact-check all leads'
+                                : `Fact-check ${unchecked} unchecked`
+                        }}
+                    </Button>
+                </Form>
+            </div>
             <LeadDisclaimer v-if="findings.length" />
             <FindingList
                 :findings="findings"

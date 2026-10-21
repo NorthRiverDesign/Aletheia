@@ -4,15 +4,18 @@ use App\Enums\AnalysisStatus;
 use App\Enums\Confidence;
 use App\Enums\FindingStatus;
 use App\Jobs\RunAnalysis;
+use App\Jobs\VerifyFinding;
 use App\Models\Analysis;
 use App\Models\Target;
 use App\Models\User;
 use App\Models\Vector;
+use App\Models\Verification;
 use App\Services\Analysis\AnalysisFailed;
 use App\Services\Analysis\AnalysisResult;
 use App\Services\Analysis\FindingData;
 use App\Services\Analysis\FraudAnalyzer;
 use App\Services\Analysis\References;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -131,6 +134,47 @@ test('a completed run stores scored findings for review', function () {
         ->and($finding->vector_id)->toBe($analysis->vector_id)
         ->and($finding->target_id)->toBe($analysis->target_id)
         ->and($finding->evidence)->toBe([['description' => 'Registry entry', 'url' => 'https://example.gov/acme']]);
+});
+
+test('new findings are fact-checked automatically when enabled', function () {
+    Bus::fake([VerifyFinding::class]);
+    config(['analysis.verification.auto' => true]);
+
+    $analysis = Analysis::factory()->create(['requested_by' => User::factory()->admin()]);
+
+    fakeAnalyzer(new AnalysisResult(
+        summary: 'One lead.',
+        findings: [new FindingData('Lead', 'Summary.', 'Why.', 60, Confidence::Medium, [], [], [])],
+        model: 'claude-opus-5-5',
+    ));
+
+    RunAnalysis::dispatchSync($analysis);
+
+    $verification = Verification::sole();
+
+    expect($verification->finding_id)->toBe($analysis->findings()->sole()->id)
+        ->and($verification->status)->toBe(AnalysisStatus::Queued)
+        ->and($verification->requested_by)->toBe($analysis->requested_by);
+
+    Bus::assertDispatched(VerifyFinding::class, fn (VerifyFinding $job) => $job->verification->is($verification));
+});
+
+test('new findings are not fact-checked automatically by default', function () {
+    Bus::fake([VerifyFinding::class]);
+    $analysis = Analysis::factory()->create();
+
+    fakeAnalyzer(new AnalysisResult(
+        summary: 'One lead.',
+        findings: [new FindingData('Lead', 'Summary.', 'Why.', 60, Confidence::Medium, [], [], [])],
+        model: 'claude-opus-5-5',
+    ));
+
+    RunAnalysis::dispatchSync($analysis);
+
+    expect($analysis->findings()->count())->toBe(1)
+        ->and(Verification::count())->toBe(0);
+
+    Bus::assertNotDispatched(VerifyFinding::class);
 });
 
 test('a failed run records the reason', function () {

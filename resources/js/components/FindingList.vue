@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
+import FactCheckBadge from '@/components/FactCheckBadge.vue';
 import RiskScore from '@/components/RiskScore.vue';
 import StatusBadge from '@/components/StatusBadge.vue';
 import { show } from '@/routes/findings';
@@ -23,6 +24,7 @@ defineProps<{
                     <div class="flex flex-wrap items-center gap-2">
                         <span class="font-medium">{{ finding.title }}</span>
                         <StatusBadge :status="finding.status" />
+                        <FactCheckBadge :verification="finding.verification" />
                     </div>
                     <p class="line-clamp-2 text-sm text-muted-foreground">
                         {{ finding.summary }}

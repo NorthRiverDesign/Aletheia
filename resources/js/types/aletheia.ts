@@ -6,6 +6,13 @@ export type Option<T extends string = string> = {
 export type ProposalStatus = 'proposed' | 'active' | 'rejected' | 'archived';
 export type AnalysisStatus = 'queued' | 'running' | 'completed' | 'failed';
 export type FindingStatus = 'pending' | 'escalated' | 'dismissed';
+export type Verdict =
+    | 'supported'
+    | 'partly_supported'
+    | 'inconclusive'
+    | 'unsupported'
+    | 'contradicted';
+export type ClaimStatus = 'confirmed' | 'unconfirmed' | 'incorrect';
 
 export type Vector = {
     id: number;
@@ -91,7 +98,32 @@ export type Finding = {
     reviewed_at: string | null;
     vector: { id: number; title: string } | null;
     target: { id: number; name: string } | null;
+    verification: Verification | null;
     created_at: string | null;
+};
+
+export type CheckedClaim = {
+    claim: string;
+    status: ClaimStatus;
+    note: string;
+    url: string | null;
+};
+
+/** The latest AI fact check of a finding. */
+export type Verification = {
+    id: number;
+    status: Option<AnalysisStatus>;
+    verdict: Option<Verdict> | null;
+    summary: string | null;
+    risk_score: number | null;
+    confidence: Option | null;
+    claims: CheckedClaim[];
+    issues: string[];
+    model: string | null;
+    error: string | null;
+    usage: Record<string, number> | null;
+    created_at: string | null;
+    completed_at: string | null;
 };
 
 export type ReferenceSource = {

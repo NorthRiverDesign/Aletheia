@@ -2,6 +2,7 @@
 
 namespace App\Services\Analysis;
 
+use App\Models\Finding;
 use App\Models\Target;
 use App\Models\Vector;
 use Illuminate\Http\Client\ConnectionException;
@@ -12,17 +13,22 @@ use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * Runs analyses on Grok through xAI's Responses API, optionally with its server-side web search.
+ * Runs analyses and fact checks on Grok through xAI's Responses API, optionally with its server-side web search.
  *
  * Requests are stateless (`store: false`): nothing is kept on xAI's side, and a
  * follow-up replays the conversation instead of referencing a stored response.
  */
-class GrokFraudAnalyzer implements FraudAnalyzer
+class GrokFraudAnalyzer implements FindingVerifier, FraudAnalyzer
 {
     /**
      * Shared by every analysis so requests reach the server holding the cached system prompt.
      */
     private const PROMPT_CACHE_KEY = 'aletheia-analysis';
+
+    /**
+     * Shared by every fact check, whose system prompt differs from the analysis one.
+     */
+    private const VERIFICATION_CACHE_KEY = 'aletheia-verification';
 
     /**
      * Ticks per US dollar in `usage.cost_in_usd_ticks`.
@@ -43,30 +49,69 @@ class GrokFraudAnalyzer implements FraudAnalyzer
 
     public function analyze(Vector $vector, Target $target, References $references): AnalysisResult
     {
+        [$arguments, $model, $usage] = $this->callTool(
+            instructions: AnalysisPrompt::system($references->global),
+            prompt: AnalysisPrompt::user($vector, $target, $references->target, $this->webSearch),
+            tool: [
+                'name' => AnalysisPrompt::TOOL_NAME,
+                'description' => 'Record the overall assessment, the scored leads for manual review, and new reference sources. Call this once, at the end.',
+                'parameters' => AnalysisPrompt::findingsSchema(),
+            ],
+            cacheKey: self::PROMPT_CACHE_KEY,
+            output: 'any findings',
+        );
+
+        return AnalysisResult::fromToolInput($arguments, $model, $usage);
+    }
+
+    public function verify(Finding $finding, References $references): VerificationResult
+    {
+        [$arguments, $model, $usage] = $this->callTool(
+            instructions: VerificationPrompt::system($references->global),
+            prompt: VerificationPrompt::user($finding, $references->target, $this->webSearch),
+            tool: [
+                'name' => VerificationPrompt::TOOL_NAME,
+                'description' => 'Record the verdict, the claims checked, and the errors found in the lead. Call this once, at the end.',
+                'parameters' => VerificationPrompt::verificationSchema(),
+            ],
+            cacheKey: self::VERIFICATION_CACHE_KEY,
+            output: 'a verdict',
+        );
+
+        return VerificationResult::fromToolInput($arguments, $model, $usage);
+    }
+
+    /**
+     * Run the conversation until Grok calls the given function, and return its arguments, the model, and usage.
+     *
+     * @param  array{name: string, description: string, parameters: array<string, mixed>}  $tool
+     * @return array{0: array<mixed>, 1: string, 2: array{input_tokens: int, cached_input_tokens: int, output_tokens: int, web_searches: int, cost_usd: float}}
+     */
+    private function callTool(string $instructions, string $prompt, array $tool, string $cacheKey, string $output): array
+    {
         if (blank($this->apiKey)) {
             throw new AnalysisFailed('XAI_API_KEY is not set.');
         }
 
-        $instructions = AnalysisPrompt::system($references->global);
-        $input = [['role' => 'user', 'content' => AnalysisPrompt::user($vector, $target, $references->target, $this->webSearch)]];
+        $input = [['role' => 'user', 'content' => $prompt]];
         $usage = ['input_tokens' => 0, 'cached_input_tokens' => 0, 'output_tokens' => 0, 'web_searches' => 0, 'cost_usd' => 0.0];
 
         // The second request only happens when the model answers in prose instead of calling the tool.
         foreach ([$this->webSearch, false] as $webSearch) {
-            $data = $this->send($instructions, $input, $webSearch);
+            $data = $this->send($instructions, $input, $tool, $cacheKey, $webSearch);
             $usage = $this->addUsage($usage, $data);
             $model = is_string($data['model'] ?? null) ? $data['model'] : $this->model;
 
-            $arguments = $this->toolArguments($data);
+            $arguments = $this->toolArguments($data, $tool['name']);
 
             if ($arguments !== null) {
-                return AnalysisResult::fromToolInput($arguments, $model, $usage);
+                return [$arguments, $model, $usage];
             }
 
             if (($data['status'] ?? null) === 'incomplete') {
                 $reason = data_get($data, 'incomplete_details.reason');
 
-                throw new AnalysisFailed('Grok stopped before recording findings'.(is_string($reason) ? " ({$reason})" : '').'. Raise XAI_MAX_OUTPUT_TOKENS or XAI_MAX_TURNS.');
+                throw new AnalysisFailed("Grok stopped before recording {$output}".(is_string($reason) ? " ({$reason})" : '').'. Raise XAI_MAX_OUTPUT_TOKENS or XAI_MAX_TURNS.');
             }
 
             $text = $this->outputText($data);
@@ -75,24 +120,20 @@ class GrokFraudAnalyzer implements FraudAnalyzer
                 $input[] = ['role' => 'assistant', 'content' => $text];
             }
 
-            $input[] = ['role' => 'user', 'content' => 'Based on your research so far, record your results now by calling the '.AnalysisPrompt::TOOL_NAME.' tool.'];
+            $input[] = ['role' => 'user', 'content' => 'Based on your research so far, record your results now by calling the '.$tool['name'].' tool.'];
         }
 
-        throw new AnalysisFailed('Grok did not record any findings.');
+        throw new AnalysisFailed("Grok did not record {$output}.");
     }
 
     /**
      * @param  list<array{role: string, content: string}>  $input
+     * @param  array{name: string, description: string, parameters: array<string, mixed>}  $tool
      * @return array<mixed>
      */
-    private function send(string $instructions, array $input, bool $webSearch): array
+    private function send(string $instructions, array $input, array $tool, string $cacheKey, bool $webSearch): array
     {
-        $tools = [[
-            'type' => 'function',
-            'name' => AnalysisPrompt::TOOL_NAME,
-            'description' => 'Record the overall assessment, the scored leads for manual review, and new reference sources. Call this once, at the end.',
-            'parameters' => AnalysisPrompt::findingsSchema(),
-        ]];
+        $tools = [['type' => 'function', ...$tool]];
 
         if ($webSearch) {
             $tools[] = ['type' => 'web_search'];
@@ -108,7 +149,7 @@ class GrokFraudAnalyzer implements FraudAnalyzer
             'max_output_tokens' => $this->maxOutputTokens,
             'max_turns' => $webSearch && $this->maxTurns > 0 ? $this->maxTurns : null,
             'reasoning' => filled($this->reasoningEffort) ? ['effort' => $this->reasoningEffort] : null,
-            'prompt_cache_key' => self::PROMPT_CACHE_KEY,
+            'prompt_cache_key' => $cacheKey,
             'store' => false,
         ], fn (mixed $value): bool => $value !== null);
 
@@ -147,15 +188,15 @@ class GrokFraudAnalyzer implements FraudAnalyzer
     }
 
     /**
-     * Arguments of the first record_findings call, if the model made one.
+     * Arguments of the first call to the named function, if the model made one.
      *
      * @param  array<mixed>  $data
      * @return array<mixed>|null
      */
-    private function toolArguments(array $data): ?array
+    private function toolArguments(array $data, string $name): ?array
     {
         foreach ($this->outputItems($data) as $item) {
-            if (($item['type'] ?? null) !== 'function_call' || ($item['name'] ?? null) !== AnalysisPrompt::TOOL_NAME) {
+            if (($item['type'] ?? null) !== 'function_call' || ($item['name'] ?? null) !== $name) {
                 continue;
             }
 
@@ -163,7 +204,7 @@ class GrokFraudAnalyzer implements FraudAnalyzer
             $arguments = is_string($arguments) ? json_decode($arguments, true) : $arguments;
 
             if (! is_array($arguments)) {
-                throw new AnalysisFailed('Grok called '.AnalysisPrompt::TOOL_NAME.' with malformed arguments.');
+                throw new AnalysisFailed('Grok called '.$name.' with malformed arguments.');
             }
 
             return $arguments;

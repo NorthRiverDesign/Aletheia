@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\Verdict;
+use App\Models\Finding;
 use App\Models\Target;
 use App\Models\Vector;
 use App\Services\Analysis\AnalysisFailed;
@@ -179,4 +181,38 @@ test('the AI_PROVIDER setting picks the analyzer', function () {
     config(['analysis.provider' => 'xai']);
 
     expect(app(FraudAnalyzer::class))->toBeInstanceOf(GrokFraudAnalyzer::class);
+});
+
+test('it fact-checks a finding through the Responses API', function () {
+    Http::fake(['api.x.ai/*' => Http::response(grokResponse([
+        ['type' => 'web_search_call', 'id' => 'ws_1', 'status' => 'completed'],
+        ['type' => 'function_call', 'call_id' => 'call_1', 'name' => 'record_verification', 'arguments' => json_encode([
+            'verdict' => 'supported',
+            'summary' => 'Both invoices appear in the checkbook.',
+            'claims' => [['claim' => 'Invoice 1182 was paid twice', 'status' => 'confirmed', 'note' => 'Two payments on 3 May.', 'url' => 'https://checkbook.example.gov/1182']],
+            'issues' => [],
+            'risk_score' => 70,
+            'confidence' => 'medium',
+        ])],
+    ]))]);
+
+    $finding = Finding::factory()->create(['title' => 'Duplicate invoices paid to Acme']);
+
+    $result = grokAnalyzer()->verify($finding, References::none());
+
+    expect($result->verdict)->toBe(Verdict::Supported)
+        ->and($result->riskScore)->toBe(70)
+        ->and($result->claims[0]['url'])->toBe('https://checkbook.example.gov/1182')
+        ->and($result->usage['cost_usd'])->toBe(0.0025);
+
+    Http::assertSent(function (Request $request) {
+        $body = $request->data();
+
+        return $body['prompt_cache_key'] === 'aletheia-verification'
+            && $body['tools'][0]['type'] === 'function'
+            && $body['tools'][0]['name'] === 'record_verification'
+            && $body['tools'][1] === ['type' => 'web_search']
+            && str_contains($body['instructions'], 'independent fact-checker')
+            && str_contains($body['input'][0]['content'], 'Lead to fact-check: Duplicate invoices paid to Acme');
+    });
 });

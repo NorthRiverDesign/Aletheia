@@ -9,6 +9,7 @@ use App\Http\Controllers\MemberController;
 use App\Http\Controllers\ReferenceSourceController;
 use App\Http\Controllers\TargetController;
 use App\Http\Controllers\VectorController;
+use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\VoteController;
 use Illuminate\Support\Facades\Route;
 
@@ -32,6 +33,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::resource('analyses', AnalysisController::class)->only(['index', 'store', 'show']);
     Route::resource('findings', FindingController::class)->only(['index', 'show', 'update']);
+    Route::post('findings/{finding}/verify', [VerificationController::class, 'store'])->name('findings.verify');
+    Route::post('analyses/{analysis}/verify', [VerificationController::class, 'analysis'])->name('analyses.verify');
 
     Route::resource('reference-sources', ReferenceSourceController::class)->only(['index', 'store', 'destroy']);
     Route::patch('reference-sources/{reference_source}/verify', [ReferenceSourceController::class, 'verify'])->name('reference-sources.verify');

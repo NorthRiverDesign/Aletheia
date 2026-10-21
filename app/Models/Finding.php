@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * An AI-generated lead, scored for manual review. Never a conclusion on its own.
@@ -87,5 +89,23 @@ class Finding extends Model
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    /**
+     * @return HasMany<Verification, $this>
+     */
+    public function verifications(): HasMany
+    {
+        return $this->hasMany(Verification::class);
+    }
+
+    /**
+     * The most recent AI fact check, whatever its status.
+     *
+     * @return HasOne<Verification, $this>
+     */
+    public function latestVerification(): HasOne
+    {
+        return $this->hasOne(Verification::class)->latestOfMany();
     }
 }

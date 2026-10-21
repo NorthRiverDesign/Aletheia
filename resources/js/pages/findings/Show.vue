@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { Form, Head, Link } from '@inertiajs/vue3';
+import { Form, Head, Link, usePoll } from '@inertiajs/vue3';
 import { ExternalLink } from '@lucide/vue';
+import { computed, watch } from 'vue';
 import FindingController from '@/actions/App/Http/Controllers/FindingController';
+import FactCheck from '@/components/FactCheck.vue';
+import FactCheckBadge from '@/components/FactCheckBadge.vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import LeadDisclaimer from '@/components/LeadDisclaimer.vue';
@@ -24,10 +27,26 @@ defineOptions({
     },
 });
 
-defineProps<{
+const props = defineProps<{
     finding: Finding;
     statuses: Option<FindingStatus>[];
 }>();
+
+const checking = computed(() =>
+    ['queued', 'running'].includes(
+        props.finding.verification?.status.value ?? '',
+    ),
+);
+
+const { start, stop } = usePoll(
+    4000,
+    { only: ['finding'] },
+    { autoStart: false },
+);
+
+watch(checking, (running) => (running ? start() : stop()), {
+    immediate: true,
+});
 
 function formatDate(value: string | null): string {
     return value ? new Date(value).toLocaleString() : '';
@@ -46,6 +65,7 @@ function formatDate(value: string | null): string {
                     <Badge variant="outline"
                         >{{ finding.confidence.label }} confidence</Badge
                     >
+                    <FactCheckBadge :verification="finding.verification" />
                 </div>
                 <h1 class="text-2xl font-semibold tracking-tight">
                     {{ finding.title }}
@@ -131,6 +151,11 @@ function formatDate(value: string | null): string {
                 </li>
             </ul>
         </section>
+
+        <FactCheck
+            :finding-id="finding.id"
+            :verification="finding.verification"
+        />
 
         <section class="space-y-4 rounded-xl border p-4">
             <Heading
