@@ -10,11 +10,14 @@ use App\Services\Analysis\FraudAnalyzer;
 use App\Services\Analysis\GrokFraudAnalyzer;
 use App\Services\Analysis\ReferenceLibrary;
 use Carbon\CarbonImmutable;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Client\Factory as HttpFactory;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -70,6 +73,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureRateLimiting();
     }
 
     /**
@@ -97,5 +101,34 @@ class AppServiceProvider extends ServiceProvider
                 ->uncompromised()
             : null,
         );
+    }
+
+    /**
+     * The "web" limiter runs on every web request, Fortify's included. Each
+     * budget is counted per member, or per IP address for guests.
+     */
+    protected function configureRateLimiting(): void
+    {
+        RateLimiter::for('web', function (Request $request): Limit|array {
+            $user = $request->user();
+            $key = $user ? 'user:'.$user->id : 'ip:'.$request->ip();
+            $limit = fn (string $name): int => config()->integer("security.throttle.{$name}");
+
+            $limits = $request->isMethodSafe()
+                ? [Limit::perMinute($limit('reads_per_minute'))->by('reads|'.$key)]
+                : [
+                    Limit::perMinute($limit('writes_per_minute'))->by('writes|'.$key),
+                    match (true) {
+                        $request->routeIs('register.store') => Limit::perHour($limit('registrations_per_hour'))->by('register|'.$request->ip()),
+                        $request->routeIs('password.email') => Limit::perHour($limit('password_resets_per_hour'))->by('password-reset|'.$request->ip()),
+                        $request->routeIs('vectors.store', 'targets.store') && ! $user?->is_admin => Limit::perHour($limit('suggestions_per_hour'))->by('suggestions|'.$key),
+                        default => null,
+                    },
+                ];
+
+            $limits = array_values(array_filter($limits, fn (?Limit $limit): bool => $limit !== null && $limit->maxAttempts > 0));
+
+            return $limits === [] ? Limit::none() : $limits;
+        });
     }
 }

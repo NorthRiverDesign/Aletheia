@@ -7,6 +7,7 @@ import {
     Library,
     MapPin,
     ScanSearch,
+    Users,
 } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
@@ -24,6 +25,7 @@ import {
 import { dashboard } from '@/routes';
 import { index as analysesIndex } from '@/routes/analyses';
 import { index as findingsIndex } from '@/routes/findings';
+import { index as membersIndex } from '@/routes/members';
 import { index as referencesIndex } from '@/routes/reference-sources';
 import { index as targetsIndex } from '@/routes/targets';
 import { index as vectorsIndex } from '@/routes/vectors';
@@ -63,6 +65,11 @@ const mainNavItems = computed<NavItem[]>(() => [
                   title: 'Review queue',
                   href: findingsIndex(),
                   icon: ClipboardCheck,
+              },
+              {
+                  title: 'Members',
+                  href: membersIndex(),
+                  icon: Users,
               },
           ]
         : []),

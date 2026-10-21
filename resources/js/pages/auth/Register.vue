@@ -89,6 +89,21 @@ defineOptions({
                 <InputError :message="errors.password_confirmation" />
             </div>
 
+            <!-- Honeypot: hidden from people, filled in by bots. -->
+            <div
+                aria-hidden="true"
+                class="absolute -left-[10000px] h-px w-px overflow-hidden"
+            >
+                <label for="website">Website</label>
+                <input
+                    id="website"
+                    type="text"
+                    name="website"
+                    tabindex="-1"
+                    autocomplete="off"
+                />
+            </div>
+
             <Button
                 type="submit"
                 class="mt-2 w-full"

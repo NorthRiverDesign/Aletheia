@@ -115,3 +115,28 @@ export type Paginated<T> = {
     prev_page_url: string | null;
     next_page_url: string | null;
 };
+
+export type MemberStatus = 'active' | 'banned';
+
+export type Member = {
+    id: number;
+    name: string;
+    email: string;
+    is_admin: boolean;
+    email_verified: boolean;
+    banned_at: string | null;
+    ban_reason: string | null;
+    vectors_count: number;
+    targets_count: number;
+    votes_count: number;
+    created_at: string | null;
+    can_ban: boolean;
+};
+
+export type BannedEmailDomain = {
+    id: number;
+    domain: string;
+    reason: string | null;
+    banned_by: string | null;
+    created_at: string | null;
+};

@@ -25,3 +25,33 @@ Artisan::command('aletheia:admin {email} {--revoke : Remove admin access instead
 
     return 0;
 })->purpose('Grant or revoke admin access for a user');
+
+Artisan::command('aletheia:ban {email} {--reason= : Why the account is suspended} {--lift : Restore access instead of banning}', function (string $email) {
+    $user = User::where('email', $email)->first();
+
+    if ($user === null) {
+        $this->error("No user is registered with {$email}.");
+
+        return 1;
+    }
+
+    if ($this->option('lift')) {
+        $user->unban();
+        $this->info("{$user->name} can sign in again.");
+
+        return 0;
+    }
+
+    if ($user->is_admin) {
+        $this->error("{$user->name} is an admin. Revoke admin access first with aletheia:admin --revoke.");
+
+        return 1;
+    }
+
+    $reason = $this->option('reason');
+    $user->ban(is_string($reason) && $reason !== '' ? $reason : null);
+
+    $this->info("{$user->name} is banned. Their votes were removed and pending suggestions rejected.");
+
+    return 0;
+})->purpose('Ban a member, or lift a ban');

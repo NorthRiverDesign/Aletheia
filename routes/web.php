@@ -1,8 +1,10 @@
 <?php
 
 use App\Http\Controllers\AnalysisController;
+use App\Http\Controllers\BannedEmailDomainController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FindingController;
+use App\Http\Controllers\MemberController;
 use App\Http\Controllers\ReferenceSourceController;
 use App\Http\Controllers\TargetController;
 use App\Http\Controllers\VectorController;
@@ -31,6 +33,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::resource('reference-sources', ReferenceSourceController::class)->only(['index', 'store', 'destroy']);
     Route::patch('reference-sources/{reference_source}/verify', [ReferenceSourceController::class, 'verify'])->name('reference-sources.verify');
+
+    Route::get('members', [MemberController::class, 'index'])->name('members.index');
+    Route::put('members/{user}/ban', [MemberController::class, 'ban'])->name('members.ban');
+    Route::delete('members/{user}/ban', [MemberController::class, 'unban'])->name('members.unban');
+    Route::resource('banned-domains', BannedEmailDomainController::class)->only(['store', 'destroy']);
 });
 
 require __DIR__.'/settings.php';
