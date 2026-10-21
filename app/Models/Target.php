@@ -23,11 +23,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $region
  * @property string|null $description
  * @property string|null $website
+ * @property float|null $latitude
+ * @property float|null $longitude
  * @property ProposalStatus $status
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
-#[Fillable(['name', 'type', 'region', 'description', 'website', 'status'])]
+#[Fillable(['name', 'type', 'region', 'description', 'website', 'latitude', 'longitude', 'status'])]
 class Target extends Model
 {
     /** @use HasFactory<TargetFactory> */
@@ -43,6 +45,8 @@ class Target extends Model
         return [
             'type' => TargetType::class,
             'status' => ProposalStatus::class,
+            'latitude' => 'float',
+            'longitude' => 'float',
         ];
     }
 

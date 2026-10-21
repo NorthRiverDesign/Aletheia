@@ -29,11 +29,26 @@ export type Target = {
     region: string | null;
     description: string | null;
     website: string | null;
+    latitude: number | null;
+    longitude: number | null;
     status: Option<ProposalStatus>;
     votes_count: number;
     has_voted: boolean;
     creator: string | null;
     created_at: string | null;
+};
+
+/** A target on the map. Activity counts are null for members who can't see analyses. */
+export type MapPlace = {
+    id: number;
+    name: string;
+    type: string;
+    region: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    running_count: number | null;
+    findings_count: number | null;
+    max_risk_score: number | null;
 };
 
 export type Analysis = {

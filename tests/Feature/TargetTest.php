@@ -69,3 +69,55 @@ test('admins see analysis options on the target page', function () {
             ->has('vectors'),
         );
 });
+
+test('targets can be placed on the map', function () {
+    $target = Target::factory()->create(['user_id' => null]);
+
+    $this->actingAs(User::factory()->admin()->create())
+        ->put(route('targets.update', $target), [
+            'name' => $target->name,
+            'type' => $target->type->value,
+            'latitude' => '44.977753',
+            'longitude' => '-93.265015',
+        ])
+        ->assertRedirect(route('targets.show', $target));
+
+    expect($target->fresh())
+        ->latitude->toBe(44.977753)
+        ->longitude->toBe(-93.265015);
+});
+
+test('clearing the coordinates removes a target from the map', function () {
+    $target = Target::factory()->located()->create(['user_id' => null]);
+
+    $this->actingAs(User::factory()->admin()->create())
+        ->put(route('targets.update', $target), [
+            'name' => $target->name,
+            'type' => $target->type->value,
+            'latitude' => '',
+            'longitude' => '',
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($target->fresh())
+        ->latitude->toBeNull()
+        ->longitude->toBeNull();
+});
+
+test('target coordinates must be a complete, valid point', function (array $location, string $error) {
+    $this->actingAs(User::factory()->create())
+        ->post(route('targets.store'), [
+            'name' => 'City of Springfield',
+            'type' => TargetType::City->value,
+            ...$location,
+        ])
+        ->assertSessionHasErrors($error);
+
+    expect(Target::count())->toBe(0);
+})->with([
+    'latitude out of range' => [['latitude' => 91, 'longitude' => 0], 'latitude'],
+    'longitude out of range' => [['latitude' => 0, 'longitude' => -181], 'longitude'],
+    'latitude without longitude' => [['latitude' => 44.9], 'longitude'],
+    'longitude without latitude' => [['longitude' => -93.2], 'latitude'],
+    'not a number' => [['latitude' => 'north', 'longitude' => -93.2], 'latitude'],
+]);

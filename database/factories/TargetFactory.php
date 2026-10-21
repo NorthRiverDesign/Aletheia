@@ -40,4 +40,15 @@ class TargetFactory extends Factory
             'status' => ProposalStatus::Proposed,
         ]);
     }
+
+    /**
+     * Indicate that the target has a map location.
+     */
+    public function located(float $latitude = 44.977753, float $longitude = -93.265015): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+        ]);
+    }
 }

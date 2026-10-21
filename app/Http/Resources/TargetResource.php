@@ -25,6 +25,8 @@ class TargetResource extends JsonResource
             'region' => $this->region,
             'description' => $this->description,
             'website' => $this->website,
+            'latitude' => $this->latitude,
+            'longitude' => $this->longitude,
             'status' => ['value' => $this->status->value, 'label' => $this->status->label()],
             'votes_count' => $this->votes_count,
             'has_voted' => (bool) $this->resource->getAttribute('has_voted'),

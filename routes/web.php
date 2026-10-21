@@ -4,6 +4,7 @@ use App\Http\Controllers\AnalysisController;
 use App\Http\Controllers\BannedEmailDomainController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FindingController;
+use App\Http\Controllers\MapController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\ReferenceSourceController;
 use App\Http\Controllers\TargetController;
@@ -15,6 +16,7 @@ Route::inertia('/', 'Welcome')->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+    Route::get('map', MapController::class)->name('map');
 
     Route::resource('vectors', VectorController::class);
     Route::patch('vectors/{vector}/status', [VectorController::class, 'updateStatus'])->name('vectors.status');

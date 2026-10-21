@@ -170,3 +170,12 @@
         @apply bg-background text-foreground;
     }
 }
+
+/* Leaflet maps: dim the OpenStreetMap tiles to match the dark theme. */
+.dark .leaflet-container {
+    background: var(--muted);
+}
+
+.dark .leaflet-tile-pane {
+    filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9);
+}

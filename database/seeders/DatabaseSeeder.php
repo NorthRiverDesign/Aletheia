@@ -28,9 +28,9 @@ class DatabaseSeeder extends Seeder
         $this->call([VectorCatalogSeeder::class, ReferenceCatalogSeeder::class]);
 
         $targets = [
-            ['name' => 'Minnesota Child Care Assistance Program', 'type' => TargetType::Program, 'region' => 'Minnesota', 'website' => 'https://mn.gov/dcyf/'],
-            ['name' => 'City of Minneapolis', 'type' => TargetType::City, 'region' => 'Minnesota', 'website' => 'https://www.minneapolismn.gov/'],
-            ['name' => 'Los Angeles County', 'type' => TargetType::County, 'region' => 'California', 'website' => 'https://lacounty.gov/'],
+            ['name' => 'Minnesota Child Care Assistance Program', 'type' => TargetType::Program, 'region' => 'Minnesota', 'website' => 'https://mn.gov/dcyf/', 'latitude' => 44.955097, 'longitude' => -93.102211],
+            ['name' => 'City of Minneapolis', 'type' => TargetType::City, 'region' => 'Minnesota', 'website' => 'https://www.minneapolismn.gov/', 'latitude' => 44.977753, 'longitude' => -93.265015],
+            ['name' => 'Los Angeles County', 'type' => TargetType::County, 'region' => 'California', 'website' => 'https://lacounty.gov/', 'latitude' => 34.052235, 'longitude' => -118.243683],
         ];
 
         foreach ($targets as $target) {
@@ -43,6 +43,8 @@ class DatabaseSeeder extends Seeder
             'type' => TargetType::County,
             'region' => 'Illinois',
             'website' => 'https://www.cookcountyil.gov/',
+            'latitude' => 41.883718,
+            'longitude' => -87.632382,
             'description' => 'Large county budget with many sole-source contracts.',
         ]);
     }

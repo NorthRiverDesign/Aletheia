@@ -5,6 +5,7 @@ import {
     Crosshair,
     LayoutGrid,
     Library,
+    MapIcon,
     MapPin,
     ScanSearch,
     Users,
@@ -22,7 +23,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
+import { dashboard, map } from '@/routes';
 import { index as analysesIndex } from '@/routes/analyses';
 import { index as findingsIndex } from '@/routes/findings';
 import { index as membersIndex } from '@/routes/members';
@@ -48,6 +49,11 @@ const mainNavItems = computed<NavItem[]>(() => [
         title: 'Targets',
         href: targetsIndex(),
         icon: MapPin,
+    },
+    {
+        title: 'Map',
+        href: map(),
+        icon: MapIcon,
     },
     {
         title: 'Reference data',
