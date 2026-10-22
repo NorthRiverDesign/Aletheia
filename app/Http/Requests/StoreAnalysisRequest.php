@@ -19,6 +19,8 @@ class StoreAnalysisRequest extends FormRequest
         return [
             'target_id' => ['required', 'integer', Rule::exists('targets', 'id')->where('status', ProposalStatus::Active->value)],
             'vector_id' => ['nullable', 'integer', Rule::exists('vectors', 'id')->where('status', ProposalStatus::Active->value)],
+            // Return to the page the run was started from (the map) instead of opening the analysis.
+            'stay' => ['sometimes', 'boolean'],
         ];
     }
 

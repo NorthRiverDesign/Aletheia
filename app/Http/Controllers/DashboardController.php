@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AnalysisStatus;
 use App\Enums\FindingStatus;
 use App\Enums\ProposalStatus;
 use App\Http\Resources\AnalysisResource;
@@ -34,6 +35,21 @@ class DashboardController extends Controller
                     + Target::where('status', ProposalStatus::Proposed)->count(),
                 'pending_findings' => $isReviewer ? Finding::where('status', FindingStatus::Pending)->count() : null,
                 'high_risk_findings' => $isReviewer ? Finding::where('status', FindingStatus::Pending)->where('risk_score', '>=', 75)->count() : null,
+            ],
+            // The "live now" strip that leads to the map; search and lead counts are for reviewers only.
+            'map' => [
+                'places' => Target::query()
+                    ->where('status', ProposalStatus::Active)
+                    ->whereNotNull('latitude')
+                    ->whereNotNull('longitude')
+                    ->count(),
+                'searches' => $isReviewer ? Analysis::whereIn('status', [AnalysisStatus::Queued, AnalysisStatus::Running])->count() : null,
+                'searched_places' => $isReviewer
+                    ? Analysis::whereIn('status', [AnalysisStatus::Queued, AnalysisStatus::Running])->distinct()->count('target_id')
+                    : null,
+                'new_leads' => $isReviewer
+                    ? Finding::where('status', '!=', FindingStatus::Dismissed)->where('created_at', '>=', now()->subDay())->count()
+                    : null,
             ],
             'proposedVectors' => Vector::query()
                 ->where('status', ProposalStatus::Proposed)
