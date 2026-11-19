@@ -69,7 +69,7 @@ const isHighRisk = (place: MapPlace) =>
 const sum = (places: MapPlace[], count: (place: MapPlace) => number) =>
     places.reduce((total, place) => total + count(place), 0);
 
-const now = useNow({ interval: 10000 });
+const now = useNow({ scheduler: (cb) => useIntervalFn(cb, 10000) });
 const mapView = ref<InstanceType<typeof TargetMap>>();
 
 // Replay: the timeline's history drives the pins and cards instead of the live counts.

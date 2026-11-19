@@ -13,6 +13,8 @@ import { Label } from '@/components/ui/label';
 const props = defineProps<{
     targetId?: number;
 }>();
+// vue-tsc 3.3 mangles `//` inside template attribute values (vuejs/language-tools#6322).
+const urlPlaceholder = 'https://';
 </script>
 
 <template>
@@ -46,7 +48,7 @@ const props = defineProps<{
                 name="url"
                 type="url"
                 required
-                placeholder="https://"
+                :placeholder="urlPlaceholder"
             />
             <InputError :message="errors.url" />
         </div>

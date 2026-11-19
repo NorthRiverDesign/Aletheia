@@ -31,6 +31,8 @@ const action = computed(() =>
         ? TargetController.update.form(props.target.id)
         : TargetController.store.form(),
 );
+// vue-tsc 3.3 mangles `//` inside template attribute values (vuejs/language-tools#6322).
+const urlPlaceholder = 'https://';
 </script>
 
 <template>
@@ -105,7 +107,7 @@ const action = computed(() =>
                     name="website"
                     type="url"
                     :default-value="target?.website ?? ''"
-                    placeholder="https://"
+                    :placeholder="urlPlaceholder"
                 />
                 <InputError :message="errors.website" />
             </div>
