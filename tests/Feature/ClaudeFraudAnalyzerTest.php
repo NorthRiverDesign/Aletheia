@@ -101,7 +101,8 @@ test('it sends the vector and target to Claude and parses the recorded findings'
     $request = $history[0]['request'];
     $body = json_decode((string) $request->getBody(), true);
 
-    expect((string) $request->getUri())->toEndWith('/v1/messages?beta=true')
+    expect((string) $request->getUri())->toEndWith('/v1/messages')
+        ->and($request->getHeaderLine('anthropic-version'))->toBe('2026-10-21')
         ->and($request->getHeaderLine('anthropic-beta'))->toContain('server-side-fallback-2026-07-01')
         ->and($body['model'])->toBe('claude-opus-5-5')
         ->and($body['fallbacks'])->toBe('default')

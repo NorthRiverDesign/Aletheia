@@ -27,6 +27,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::resource('targets', TargetController::class);
     Route::patch('targets/{target}/status', [TargetController::class, 'updateStatus'])->name('targets.status');
+    Route::patch('targets/{target}/location', [TargetController::class, 'updateLocation'])->name('targets.location');
     Route::post('targets/{target}/vote', [VoteController::class, 'target'])
         ->middleware('throttle:60,1')
         ->name('targets.vote');

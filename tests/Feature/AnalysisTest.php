@@ -81,6 +81,24 @@ test('leaving the vector empty queues every active vector', function () {
     Queue::assertPushed(RunAnalysis::class, 3);
 });
 
+test('runs started from the map return to the map', function () {
+    Queue::fake();
+    $target = Target::factory()->create();
+    $vector = Vector::factory()->create();
+
+    $this->actingAs(User::factory()->admin()->create())
+        ->from(route('map', ['place' => $target->id]))
+        ->post(route('analyses.store'), ['target_id' => $target->id, 'vector_id' => $vector->id, 'stay' => true])
+        ->assertRedirect(route('map', ['place' => $target->id]));
+
+    expect(Analysis::sole()->vector_id)->toBe($vector->id);
+
+    $this->post(route('analyses.store'), ['target_id' => $target->id, 'vector_id' => $vector->id, 'stay' => true])
+        ->assertRedirect(route('map', ['place' => $target->id]));
+
+    expect(Analysis::count())->toBe(1);
+});
+
 test('pairs already in progress are not queued twice', function () {
     Queue::fake();
     $analysis = Analysis::factory()->create();

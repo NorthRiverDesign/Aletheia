@@ -2,11 +2,12 @@
 
 namespace App\Services\Analysis;
 
+use Anthropic\Beta\Messages\BetaAssistantMessageParam;
 use Anthropic\Beta\Messages\BetaMessage;
-use Anthropic\Beta\Messages\BetaMessageParam;
 use Anthropic\Beta\Messages\BetaOutputConfig\Effort;
 use Anthropic\Beta\Messages\BetaTool;
 use Anthropic\Beta\Messages\BetaToolUseBlock;
+use Anthropic\Beta\Messages\BetaUserMessageParam;
 use Anthropic\Beta\Messages\BetaWebFetchTool20260209;
 use Anthropic\Beta\Messages\BetaWebSearchTool20260209;
 use Anthropic\Client;
@@ -91,7 +92,7 @@ class ClaudeFraudAnalyzer implements FindingVerifier, FraudAnalyzer
     private function callTool(string $system, string $prompt, BetaTool $tool, bool $webFetch, string $declined, string $output): array
     {
         $webFetch = $webFetch && $this->webFetchMaxUses > 0;
-        $messages = [BetaMessageParam::with(content: $prompt, role: 'user')];
+        $messages = [BetaUserMessageParam::with(content: $prompt)];
         $usage = ['input_tokens' => 0, 'cached_input_tokens' => 0, 'output_tokens' => 0, 'web_searches' => 0];
 
         for ($request = 1; $request <= self::MAX_REQUESTS; $request++) {
@@ -123,10 +124,10 @@ class ClaudeFraudAnalyzer implements FindingVerifier, FraudAnalyzer
             }
 
             // Resume a paused server-side tool loop as-is; otherwise ask once more for the tool call.
-            $messages[] = BetaMessageParam::fromArray(['role' => 'assistant', 'content' => $response->content]);
+            $messages[] = BetaAssistantMessageParam::fromArray(['content' => $response->content]);
 
             if ($response->stopReason !== 'pause_turn') {
-                $messages[] = BetaMessageParam::with(content: 'Record your results now by calling the '.$tool->name.' tool.', role: 'user');
+                $messages[] = BetaUserMessageParam::with(content: 'Record your results now by calling the '.$tool->name.' tool.');
             }
         }
 
@@ -134,7 +135,7 @@ class ClaudeFraudAnalyzer implements FindingVerifier, FraudAnalyzer
     }
 
     /**
-     * @param  list<BetaMessageParam>  $messages
+     * @param  list<BetaUserMessageParam|BetaAssistantMessageParam>  $messages
      */
     private function send(string $system, array $messages, BetaTool $tool, bool $webFetch): BetaMessage
     {

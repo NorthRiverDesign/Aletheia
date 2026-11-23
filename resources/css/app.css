@@ -179,3 +179,337 @@
 .dark .leaflet-tile-pane {
     filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9);
 }
+
+.dark .leaflet-bar a,
+.dark .leaflet-bar a:hover {
+    background-color: var(--card);
+    border-color: var(--border);
+    color: var(--foreground);
+}
+
+.dark .leaflet-container .leaflet-control-attribution {
+    background: rgb(0 0 0 / 0.55);
+    color: var(--muted-foreground);
+}
+
+.dark .leaflet-control-attribution a {
+    color: var(--foreground);
+}
+
+.leaflet-container .leaflet-tooltip {
+    border-color: var(--border);
+    border-radius: calc(var(--radius) - 4px);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.15);
+    font: inherit;
+    font-size: 0.75rem;
+}
+
+.dark .leaflet-container .leaflet-tooltip {
+    background: var(--popover);
+    color: var(--popover-foreground);
+}
+
+.dark .leaflet-tooltip-top::before {
+    border-top-color: var(--popover);
+}
+
+.dark .leaflet-tooltip-bottom::before {
+    border-bottom-color: var(--popover);
+}
+
+/* Map pins, search areas, connections and live pings (TargetMap). */
+.map-pin-icon {
+    background: none;
+    border: 0;
+    outline: none;
+}
+
+.map-pin {
+    position: relative;
+    height: 100%;
+    width: 100%;
+    filter: drop-shadow(0 1px 1.5px rgb(0 0 0 / 0.4));
+    transform-origin: 50% 100%;
+    transition: transform 150ms ease-out;
+}
+
+.map-pin svg {
+    display: block;
+    height: 100%;
+    width: 100%;
+}
+
+.map-pin path {
+    fill: var(--pin);
+    stroke: #fff;
+    stroke-width: 2;
+}
+
+.map-pin-icon:hover .map-pin,
+.map-pin-icon:focus-visible .map-pin {
+    transform: scale(1.15);
+}
+
+.map-pin-icon:focus-visible .map-pin path {
+    stroke: var(--ring);
+    stroke-width: 3;
+}
+
+.map-hover .map-pin {
+    transform: scale(1.2);
+}
+
+.map-pin.map-pin-selected {
+    transform: scale(1.35);
+}
+
+.map-pin.map-pin-selected path {
+    stroke: #facc15;
+    stroke-width: 3;
+}
+
+.map-pin-count,
+.map-pin-dot {
+    position: absolute;
+    left: 50%;
+    top: 36%;
+    transform: translate(-50%, -50%);
+}
+
+.map-pin-count {
+    color: #fff;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.map-pin-dot {
+    background: #fff;
+    border-radius: 9999px;
+    height: 8px;
+    width: 8px;
+}
+
+.map-pin-live {
+    position: absolute;
+    right: -3px;
+    top: -3px;
+    background: #2563eb;
+    border: 2px solid #fff;
+    border-radius: 9999px;
+    height: 12px;
+    width: 12px;
+    animation: map-blink 1.4s ease-in-out infinite;
+}
+
+.map-pin-label {
+    position: absolute;
+    left: calc(100% + 2px);
+    top: 5px;
+    display: none;
+    max-width: 11rem;
+    overflow: hidden;
+    padding: 1px 6px;
+    background: rgb(255 255 255 / 0.92);
+    border-radius: 4px;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+    color: #0f172a;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 16px;
+    pointer-events: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dark .map-pin-label {
+    background: color-mix(in srgb, var(--popover) 92%, transparent);
+    color: var(--popover-foreground);
+}
+
+.map-near .map-pin-label {
+    display: block;
+}
+
+.map-pin-new {
+    position: absolute;
+    left: -3px;
+    top: -3px;
+    background: #10b981;
+    border: 2px solid #fff;
+    border-radius: 9999px;
+    height: 12px;
+    width: 12px;
+}
+
+.map-cluster-icon {
+    background: none;
+    border: 0;
+    outline: none;
+}
+
+.map-cluster {
+    position: relative;
+    display: grid;
+    height: 100%;
+    width: 100%;
+    place-items: center;
+    background: var(--pin);
+    border: 2px solid #fff;
+    border-radius: 9999px;
+    box-shadow:
+        0 0 0 5px color-mix(in srgb, var(--pin) 30%, transparent),
+        0 1px 3px rgb(0 0 0 / 0.4);
+    color: #fff;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    transition: transform 150ms ease-out;
+}
+
+.map-cluster-icon:hover .map-cluster,
+.map-cluster-icon:focus-visible .map-cluster,
+.map-hover .map-cluster {
+    transform: scale(1.12);
+}
+
+.map-cluster-icon:focus-visible .map-cluster {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+}
+
+.map-radar {
+    position: relative;
+    height: 100%;
+    width: 100%;
+    border-radius: 9999px;
+    background: radial-gradient(
+        circle,
+        rgb(59 130 246 / 0.22) 0%,
+        rgb(59 130 246 / 0.08) 55%,
+        transparent 70%
+    );
+}
+
+.map-radar::before,
+.map-radar::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+}
+
+.map-radar::before {
+    background: conic-gradient(
+        from 0deg,
+        transparent 0deg 260deg,
+        rgb(59 130 246 / 0.55) 360deg
+    );
+    mask: radial-gradient(circle, #000 69%, transparent 70%);
+    animation: map-sweep 2.4s linear infinite;
+}
+
+.map-radar::after {
+    border: 1.5px solid rgb(37 99 235 / 0.6);
+    animation: map-ripple 2.4s ease-out infinite;
+}
+
+.map-radar.map-radar-queued {
+    background: none;
+    border: 2px dashed rgb(37 99 235 / 0.6);
+    animation: map-sweep 12s linear infinite;
+}
+
+.map-radar.map-radar-queued::before,
+.map-radar.map-radar-queued::after {
+    content: none;
+}
+
+.map-area-running,
+.map-link-sweep {
+    animation: map-march 1.2s linear infinite;
+}
+
+.map-link {
+    transition: opacity 150ms ease-out;
+}
+
+.map-link-dim {
+    opacity: 0.15;
+}
+
+.map-heat {
+    height: 100%;
+    width: 100%;
+    border-radius: 9999px;
+    background: radial-gradient(
+        circle,
+        color-mix(in srgb, var(--heat) 55%, transparent) 0%,
+        color-mix(in srgb, var(--heat) 22%, transparent) 40%,
+        transparent 70%
+    );
+}
+
+.map-ping {
+    height: 100%;
+    width: 100%;
+    border: 3px solid var(--ping);
+    border-radius: 9999px;
+    animation: map-ripple 1.6s ease-out 2 both;
+}
+
+.map-far .map-pin {
+    scale: 0.8;
+}
+
+.map-far .map-radar,
+.map-far .map-heat,
+.map-far .map-ping {
+    scale: 0.6;
+}
+
+@keyframes map-sweep {
+    to {
+        transform: rotate(1turn);
+    }
+}
+
+@keyframes map-ripple {
+    from {
+        opacity: 0.9;
+        transform: scale(0.2);
+    }
+
+    to {
+        opacity: 0;
+        transform: scale(1);
+    }
+}
+
+@keyframes map-march {
+    to {
+        stroke-dashoffset: -28;
+    }
+}
+
+@keyframes map-blink {
+    50% {
+        opacity: 0.35;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .map-pin,
+    .map-cluster,
+    .map-pin-live,
+    .map-radar,
+    .map-radar::before,
+    .map-radar::after,
+    .map-area-running,
+    .map-link-sweep,
+    .map-ping {
+        animation: none;
+        transition: none;
+    }
+}

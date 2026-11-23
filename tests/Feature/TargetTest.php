@@ -87,6 +87,33 @@ test('targets can be placed on the map', function () {
         ->longitude->toBe(-93.265015);
 });
 
+test('admins can place a target straight from the map', function () {
+    $target = Target::factory()->create(['user_id' => null]);
+
+    $this->actingAs(User::factory()->admin()->create())
+        ->from(route('map'))
+        ->patch(route('targets.location', $target), ['latitude' => '41.878100', 'longitude' => '-87.629800'])
+        ->assertRedirect(route('map'));
+
+    expect($target->fresh())
+        ->latitude->toBe(41.8781)
+        ->longitude->toBe(-87.6298);
+});
+
+test('placing a target from the map needs a valid point and permission to edit it', function () {
+    $target = Target::factory()->create(['user_id' => null]);
+
+    $this->actingAs(User::factory()->create())
+        ->patch(route('targets.location', $target), ['latitude' => '41.8781', 'longitude' => '-87.6298'])
+        ->assertForbidden();
+
+    $this->actingAs(User::factory()->admin()->create())
+        ->patch(route('targets.location', $target), ['latitude' => '91', 'longitude' => ''])
+        ->assertSessionHasErrors(['latitude', 'longitude']);
+
+    expect($target->fresh()->latitude)->toBeNull();
+});
+
 test('clearing the coordinates removes a target from the map', function () {
     $target = Target::factory()->located()->create(['user_id' => null]);
 

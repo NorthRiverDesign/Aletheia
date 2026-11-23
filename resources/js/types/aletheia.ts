@@ -45,17 +45,71 @@ export type Target = {
     created_at: string | null;
 };
 
-/** A target on the map. Activity counts are null for members who can't see analyses. */
+/** A search queued or running at a place on the map. */
+export type MapSearch = {
+    id: number;
+    status: 'queued' | 'running';
+    vector: { id: number; title: string } | null;
+    created_at: string | null;
+    started_at: string | null;
+};
+
+/** A target on the map. Activity is null for members who can't see analyses. */
 export type MapPlace = {
     id: number;
     name: string;
-    type: string;
+    type: Option;
     region: string | null;
     latitude: number | null;
     longitude: number | null;
+    votes_count: number;
     running_count: number | null;
     findings_count: number | null;
     max_risk_score: number | null;
+    /** When the newest open lead here was found. */
+    latest_lead_at: string | null;
+    searches: MapSearch[] | null;
+    leads: { id: number; title: string; risk_score: number }[] | null;
+    /** Vectors with open leads here. */
+    patterns: { id: number; title: string }[] | null;
+};
+
+/** Two places whose open leads name the same people or organizations. */
+export type MapLink = {
+    source: number;
+    target: number;
+    names: string[];
+    count: number;
+};
+
+/** A search started or an open lead found, for replaying the map over time. */
+export type MapTimelineEvent = {
+    kind: 'search' | 'lead';
+    target_id: number;
+    at: string;
+    risk_score: number | null;
+};
+
+/**
+ * The map's replay history: events since `from`, oldest first, and each place's open leads from before
+ * `from`, so a replay starts from the right counts.
+ */
+export type MapHistory = {
+    from: string;
+    events: MapTimelineEvent[];
+    before: { target_id: number; leads: number; top: number }[];
+};
+
+/** A search update or new open lead in the map's live feed. */
+export type MapEvent = {
+    key: string;
+    kind: AnalysisStatus | 'lead';
+    at: string | null;
+    target: { id: number; name: string } | null;
+    vector: string | null;
+    analysis_id: number;
+    finding: { id: number; title: string; risk_score: number } | null;
+    findings_count: number | null;
 };
 
 export type Analysis = {

@@ -11,21 +11,31 @@ import type { PickerOption } from '@/types';
 /**
  * Pass a fixed vectorId or targetId to pin one side of the pairing; the other
  * side is picked from the options, which arrive sorted by community votes.
+ * `stay` returns to the current page after queueing; `compact` stacks the
+ * fields for narrow panels.
  */
 const props = defineProps<{
     vectors?: PickerOption[];
     targets?: PickerOption[];
     vectorId?: number;
     targetId?: number;
+    stay?: boolean;
+    compact?: boolean;
 }>();
 </script>
 
 <template>
     <Form
         v-bind="AnalysisController.store.form()"
-        class="flex flex-col gap-4 sm:flex-row sm:items-end"
+        :class="
+            props.compact
+                ? 'flex flex-col gap-3'
+                : 'flex flex-col gap-4 sm:flex-row sm:items-end'
+        "
+        :options="props.stay ? { preserveScroll: true } : {}"
         v-slot="{ errors, processing }"
     >
+        <input v-if="props.stay" type="hidden" name="stay" value="1" />
         <input
             v-if="props.targetId"
             type="hidden"

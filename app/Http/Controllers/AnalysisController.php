@@ -95,7 +95,7 @@ class AnalysisController extends Controller
                 ? __('This pairing is already being analyzed.')
                 : __('This pairing was analyzed recently. To save tokens it can run again :when.', ['when' => $until->diffForHumans()])]);
 
-            return to_route('analyses.show', $existing);
+            return $request->boolean('stay') ? back() : to_route('analyses.show', $existing);
         }
 
         $skipped = $vectors->count() - count($queued);
@@ -107,6 +107,10 @@ class AnalysisController extends Controller
             ? ['type' => 'info', 'message' => __('Nothing new to queue.').' '.$skippedMessage]
             : ['type' => 'success', 'message' => trans_choice('{1} Queued 1 analysis.|[2,*] Queued :count analyses.', count($queued))
                 .($skipped > 0 ? ' '.$skippedMessage : '')]);
+
+        if ($request->boolean('stay')) {
+            return back();
+        }
 
         return count($queued) === 1
             ? to_route('analyses.show', $queued[0])

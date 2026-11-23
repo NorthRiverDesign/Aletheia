@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ExternalLink, Pencil, Trash2 } from '@lucide/vue';
+import { ExternalLink, MapPin, Pencil, Trash2 } from '@lucide/vue';
 import AddReferenceSourceForm from '@/components/AddReferenceSourceForm.vue';
 import AnalysisList from '@/components/AnalysisList.vue';
 import FindingList from '@/components/FindingList.vue';
@@ -11,6 +11,7 @@ import StatusBadge from '@/components/StatusBadge.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import VoteButton from '@/components/VoteButton.vue';
+import { map } from '@/routes';
 import { destroy, edit, index, status, vote } from '@/routes/targets';
 import type {
     Analysis,
@@ -89,6 +90,17 @@ function remove(): void {
                 >
                     {{ target.website }} <ExternalLink class="size-3" />
                 </a>
+                <Link
+                    v-if="
+                        target.latitude !== null &&
+                        target.longitude !== null &&
+                        target.status.value === 'active'
+                    "
+                    :href="map({ query: { place: target.id } })"
+                    class="flex w-fit items-center gap-1 text-sm font-medium text-primary hover:underline"
+                >
+                    <MapPin class="size-3.5" /> View on map
+                </Link>
                 <p v-if="target.creator" class="text-xs text-muted-foreground">
                     Suggested by {{ target.creator }}
                 </p>

@@ -188,6 +188,23 @@ class TargetController extends Controller
     }
 
     /**
+     * Place a target on the map, straight from the map.
+     */
+    public function updateLocation(Request $request, Target $target): RedirectResponse
+    {
+        Gate::authorize('update', $target);
+
+        $target->update($request->validate([
+            'latitude' => ['required', 'numeric', 'between:-90,90'],
+            'longitude' => ['required', 'numeric', 'between:-180,180'],
+        ]));
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Placed :name on the map.', ['name' => $target->name])]);
+
+        return back();
+    }
+
+    /**
      * Delete a target along with its analyses and findings.
      */
     public function destroy(Target $target): RedirectResponse
